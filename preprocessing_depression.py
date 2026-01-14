@@ -12,7 +12,7 @@ from sklearn.preprocessing import StandardScaler, OneHotEncoder
 # Full pipeline
 ###################################
 
-def clean_and_preprocess_depression_data(dataset: pd.DataFrame, test_split: float, random_state: int, miss_val_threshold: float):
+def clean_and_preprocess_depression_data(dataset: pd.DataFrame, raw_data_folder: str, test_split: float, random_state: int, miss_val_threshold: float):
     '''
     Takes a dataframe and splits it into the training set, the corresponding target embeddings and calculates a binary label. 
 
@@ -22,7 +22,7 @@ def clean_and_preprocess_depression_data(dataset: pd.DataFrame, test_split: floa
     '''
     
     # Load train/test split
-    X_train, X_test, y_train, y_test, y_embed_train, y_embed_test = split_depression_data(dataset, random_state, test_split)
+    X_train, X_test, y_train, y_test, y_embed_train, y_embed_test = split_depression_data(dataset, raw_data_folder, random_state, test_split)
 
     # Clean features 
     X_train_cleaned, X_test_cleaned = clean_depression_data(X_train, X_test, miss_val_threshold)
@@ -37,7 +37,7 @@ def clean_and_preprocess_depression_data(dataset: pd.DataFrame, test_split: floa
 # Data Splitting
 ###################################
 
-def split_depression_data(dataset, random_state, test_split):
+def split_depression_data(dataset, raw_data_folder, random_state, test_split):
     '''
     Splits the depression dataset and adds the binary labelling. 
     
@@ -58,7 +58,7 @@ def split_depression_data(dataset, random_state, test_split):
     dataset['depressed'] = (depression_criteria).astype(int)
 
     # Get features from the depression file, so we can drop them in X
-    features_from_depression_file = list(pd.read_sas('raw_data/targets/DPQ_L_Target_Depression.xpt', format='xport').drop(columns='SEQN').columns)
+    features_from_depression_file = list(pd.read_sas('{raw_data_folder}/targets/DPQ_L_Target_Depression.xpt', format='xport').drop(columns='SEQN').columns)
 
     # Define sets
     X = dataset.drop(columns=features_from_depression_file).drop(columns=['SEQN', 'depressed'])
@@ -398,8 +398,8 @@ def preprocess_depression_data(X_train, X_test):
     Basic pipeline. Imputes and scales, and encodes nominal features. 
     TODO: Discuss if a more complex pipeline is necessary
     
-    :param X_train: Description
-    :param X_test: Description
+    :param X_train: dataframe training set
+    :param X_test: dataframe test set
     '''
 
     ordinal_cols, nominal_cols, binary_cols, numerical_cols, object_cols = identify_column_types(X_train)
