@@ -80,6 +80,9 @@ def preprocess_depression_data(dataset: pd.DataFrame, random_state: int):
 
     return X_train_preprocessed, X_test_preprocessed, y_train, y_test, y_embed_train, y_embed_test
 
+###################################
+# Helper Functions 
+###################################
 
 def split_depression_data(dataset, random_state):
     '''
@@ -128,14 +131,3 @@ def split_depression_data(dataset, random_state):
     y_embed_test  = y_embed.loc[X_test.index]
 
     return X_train, X_test, y_train, y_test, y_embed_train, y_embed_test
-
-
-
-###################################
-# INSOMNIA 
-###################################
-
-def preprocess_insomnia_data(dataset: pd.DataFrame) -> pd.DataFrame:
-    ...
-
-
