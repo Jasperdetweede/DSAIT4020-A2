@@ -134,7 +134,7 @@ def clean_depression_data(X_train: pd.DataFrame, X_test: pd.DataFrame, miss_val_
     '''
 
     # 1. drop id column, unnecessary flag column and target leakage columns
-    bad_columns = ['SEQN', 'SMAQUEX2', 'FNQ530', 'FNQ540']
+    bad_columns = ['SEQN', 'SMAQUEX2', 'FN140', 'FN150', 'FN510', 'FN520', 'FNQ530', 'FNQ540']
     X_train.drop(columns=bad_columns, inplace=True, errors='ignore')
     X_test.drop(columns=bad_columns, inplace=True, errors='ignore')
 
@@ -396,7 +396,6 @@ def identify_column_types(df, ignore_columns=[]):
 def preprocess_depression_data(X_train, X_test):
     '''
     Basic pipeline. Imputes and scales, and encodes nominal features. 
-    TODO: Discuss if a more complex pipeline is necessary
     
     :param X_train: dataframe training set
     :param X_test: dataframe test set
@@ -411,7 +410,7 @@ def preprocess_depression_data(X_train, X_test):
         ]), numerical_cols),
         
         ('ord', Pipeline([
-            ('imputer', SimpleImputer(strategy='most_frequent')),
+            ('imputer', SimpleImputer(strategy='median')),
         ]), ordinal_cols),
         
         ('nom', Pipeline([
