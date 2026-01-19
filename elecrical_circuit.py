@@ -86,6 +86,9 @@ class ElectricalCircuit:
 		#return np.ndarray( vals )
 		return vals
 
+	def get_embedding( self ):
+		return [ self.Ra, self.Rb, self.Rc, self.Rd, self.Re, self.Rf, self.Rg, self.Rh ]
+
 if __name__ == "__main__":
 	ec = ElectricalCircuit()
 	X, y = ec.gen_random_samples( 100000 )
