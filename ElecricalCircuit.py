@@ -19,6 +19,8 @@ class ElectricalCircuit:
 		self.Rh = resistances[7]
 		self.source_voltage = source_voltage
 		self.thresholds = threshold
+		self.calculate_values()
+		return self.get_train_values(), self.is_light_on()
 
 	def gen_random_samples( self, sample_count, thresholds=None, random_state=42 ):
 		rng = np.random.default_rng( random_state )
@@ -34,7 +36,7 @@ class ElectricalCircuit:
 		if thresholds is not None:
 			self.thresholds = thresholds
 		else:
-			self.thresholds = np.round( rng.random( sample_count ) / 20, decimals = 4 )
+			self.thresholds = np.round( rng.random( sample_count ) / 40, decimals = 4 )
 		self.calculate_values()
 		return self.get_train_values(), self.is_light_on()
 	
@@ -66,8 +68,6 @@ class ElectricalCircuit:
 		self.Vh = self.Ih * self.Rh
 		
 	def is_light_on( self ):
-		print( self.If * self.Vf )
-		print( self.thresholds )
 		return self.If * self.Vf > self.thresholds
 
 	def get_train_values( self ):
@@ -77,8 +77,8 @@ class ElectricalCircuit:
 			self.Ib,
 			self.Vc,
 			self.Id,
-			self.Rd/self.Ie,
-			self.Rf/self.Ig,
+			self.Rd/( self.Ie + 1e-8 ),
+			self.Rf/( self.Ig + 1e-8 ),
 			self.Vg * self.Ig,
 			self.Vh,
 			self.thresholds
@@ -88,6 +88,5 @@ class ElectricalCircuit:
 
 if __name__ == "__main__":
 	ec = ElectricalCircuit()
-	X, y = ec.gen_random_samples( 8 )
-	print( X )
-	print( y )
+	X, y = ec.gen_random_samples( 100000 )
+	print( y.sum() )
