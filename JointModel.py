@@ -2,7 +2,7 @@ import torch
 from torch import nn
 from collections import OrderedDict
 
-def JointModel(nn.Module):
+class JointModel(nn.Module):
 	def __init__( self, n_features, embedding_size, embedding_loss, clf_loss, l, optimizer, device="cpu"):
 		super().__init__()
 		
