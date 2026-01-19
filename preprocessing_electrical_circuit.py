@@ -22,7 +22,7 @@ def gen_and_preprocess_ec_data( sample_count: int, test_split: float, random_sta
 	:param random_state: Random state for train/test split
 	:return: for train and test sets: X, y, e
 	'''
-	
+
 	# Load train/test split
 	X_train, X_test, y_train, y_test, e_train, e_test = gen_and_split_ec_data( sample_count, test_split, random_state )
 
@@ -38,8 +38,8 @@ def gen_and_preprocess_ec_data( sample_count: int, test_split: float, random_sta
 
 def gen_and_split_ec_data( sample_count: int, test_split: float, random_state: int ):
 	'''
-	Generates and Splits an electrical circuit dataset and adds the binary labelling. 
-	
+	Generates and Splits an electrical circuit dataset and adds the binary labelling.
+
 	:param sample_count: Number of different circuits to generate
 	:param test_split: Percentage of data to use as training dataset
 	:param random_state: Random state for train/test split
@@ -48,10 +48,8 @@ def gen_and_split_ec_data( sample_count: int, test_split: float, random_state: i
 
 	ec = ElectricalCircuit()
 	X, y = ec.gen_random_samples( sample_count = sample_count, random_state=random_state )
-	X = pd.DataFrame( X )
-	e = pd.DataFrame( ec.get_embedding() )
-	y = pd.DataFrame( y )
-	
+	e = ec.get_embedding()
+
 	X_train, X_test, y_train, y_test = train_test_split(
 		X,
 		y,
@@ -72,7 +70,7 @@ def gen_and_split_ec_data( sample_count: int, test_split: float, random_state: i
 def preprocess_ec_data(X_train, X_test):
 	'''
 	Basic pipeline. All features are numeric.
-	
+
 	:param X_train: dataframe training set
 	:param X_test: dataframe test set
 	'''

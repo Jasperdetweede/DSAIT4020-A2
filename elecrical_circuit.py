@@ -1,14 +1,15 @@
 import numpy as np
+import pandas as pd
 
 class ElectricalCircuit:
 	def __init__( self ):
 		print( "Basic Electrical Circuit Simulator/Generator")
-	
+
 	def gen_predefined_circuits( self, resistances, source_voltage, threshold ):
 		if len( resistances ) != 8:
 			print( f"Invalid amount of resistors for circuit ({len(resistances)}) out of 8 expected\nDefault values will be used")
 			return None
-		
+
 		self.Ra = resistances[0]
 		self.Rb = resistances[1]
 		self.Rc = resistances[2]
@@ -39,7 +40,7 @@ class ElectricalCircuit:
 			self.thresholds = np.round( rng.random( sample_count ) / 40, decimals = 4 )
 		self.calculate_values()
 		return self.get_train_values(), self.is_light_on()
-	
+
 	def calculate_values( self ):
 		Rde = ( self.Rd + self.Re ) / ( self.Rd * self.Re )
 		Rcde = self.Rc + Rde
@@ -66,9 +67,9 @@ class ElectricalCircuit:
 		self.Vf = self.If * self.Rf
 		self.Vg = self.Ig * self.Rg
 		self.Vh = self.Ih * self.Rh
-		
+
 	def is_light_on( self ):
-		return self.If * self.Vf > self.thresholds
+		return pd.DataFrame( self.If * self.Vf > self.thresholds )
 
 	def get_train_values( self ):
 		vals = [
@@ -83,11 +84,10 @@ class ElectricalCircuit:
 			self.Vh,
 			self.thresholds
 		]
-		#return np.ndarray( vals )
-		return vals
+		return pd.DataFrame( vals )
 
 	def get_embedding( self ):
-		return [ self.Ra, self.Rb, self.Rc, self.Rd, self.Re, self.Rf, self.Rg, self.Rh ]
+		return pd.DataFrame( [ self.Ra, self.Rb, self.Rc, self.Rd, self.Re, self.Rf, self.Rg, self.Rh ] )
 
 if __name__ == "__main__":
 	ec = ElectricalCircuit()
