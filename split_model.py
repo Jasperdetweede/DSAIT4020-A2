@@ -2,7 +2,7 @@ import torch
 from torch import nn
 from collections import OrderedDict
 
-def SplitModel(nn.Module):
+class SplitModel(nn.Module):
 	def __init__( self, n_features, embedding_size, embedding_loss, clf_loss, optimizer, device="cpu" ):
 		super().__init__()
 		
