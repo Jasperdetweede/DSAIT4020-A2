@@ -75,7 +75,7 @@ def train_split_model( X_train, X_test, y_train, y_test, y_embed_train, y_embed_
 	y_embed_pred_train, y_pred_train = model.predict( X_train )
 	y_embed_pred_test, y_pred_test = model.predict( X_test )
 
-	print("\n\n", "#"*40, "Joint MLP ", "#"*40)
+	print("\n\n", "#"*40, "Split MLP ", "#"*40)
 	print("F1 score:", f1_score(y_test, y_pred_test))
 	print(classification_report(y_test, y_pred))
 	print("Confusion matrix:\n", confusion_matrix(y_test, y_pred))
@@ -83,4 +83,4 @@ def train_split_model( X_train, X_test, y_train, y_test, y_embed_train, y_embed_
 
 
 if __name__ == "__main__":
-	print("Usage only as a module, provides class SplitModel( n_features, embedding_size, embedding_loss, clf_loss, optimizer, device=\"cpu\" )")
+	print("Usage only as a module, provides class SplitModel( n_features, embedding_size, device=\"cpu\" )")

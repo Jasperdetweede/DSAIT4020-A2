@@ -42,7 +42,7 @@ class JointModel(nn.Module):
 	def backward( self, y_pred, y, embedding_pred, embedding ):
 		loss = self.loss_clf( y_pred, y ) + self.l*self.loss_emb( embedding_pred, embedding )
 		self.optim_clf.zero_grad()
-        self.optim_emb.zero_grad()
+		self.optim_emb.zero_grad()
 		loss.backward()
 		self.optim_clf.step()
 		self.optim_emb.step()
