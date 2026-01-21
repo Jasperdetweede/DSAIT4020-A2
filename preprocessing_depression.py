@@ -58,7 +58,7 @@ def split_depression_data(dataset, raw_data_folder, random_state, test_split):
     dataset['depressed'] = (depression_criteria).astype(int)
 
     # Get features from the depression file, so we can drop them in X
-    features_from_depression_file = list(pd.read_sas('{raw_data_folder}/targets/DPQ_L_Target_Depression.xpt', format='xport').drop(columns='SEQN').columns)
+    features_from_depression_file = list(pd.read_sas(f'{raw_data_folder}/targets/DPQ_L_Target_Depression.xpt', format='xport').drop(columns='SEQN').columns)
 
     # Define sets
     X = dataset.drop(columns=features_from_depression_file).drop(columns=['SEQN', 'depressed'])
@@ -309,10 +309,10 @@ def calculate_total_alcohol_consumption(df):
 def remap_ordinal_features(df):
     # for some ordinal features, higher value = less frequent/severe => should be reversed
     remappings = {
-        # FNQ510: 1=daily → 5=never (should be: higher = more frequent)
-        'FNQ510': {1: 4, 2: 3, 3: 2, 4: 1, 5: 0},  # daily→4, weekly→3, monthly→2, few times→1, never→0
+        # FNQ510: 1=daily, 5=never (should be: higher = more frequent)
+        'FNQ510': {1: 4, 2: 3, 3: 2, 4: 1, 5: 0},  # daily=4, weekly=3, monthly=2, few times=1, never=0
         
-        # OHQ620-OHQ680: 1=very often → 5=never (should be: higher = more problems)
+        # OHQ620-OHQ680: 1=very often, 5=never (should be: higher = more problems)
         'OHQ620': {1: 4, 2: 3, 3: 2, 4: 1, 5: 0},
         'OHQ630': {1: 4, 2: 3, 3: 2, 4: 1, 5: 0},
         'OHQ640': {1: 4, 2: 3, 3: 2, 4: 1, 5: 0},
@@ -320,21 +320,21 @@ def remap_ordinal_features(df):
         'OHQ670': {1: 4, 2: 3, 3: 2, 4: 1, 5: 0},
         'OHQ680': {1: 4, 2: 3, 3: 2, 4: 1, 5: 0},
         
-        # FSD032A-C: 1=often true → 3=never true (should be: higher = more food insecurity)
+        # FSD032A-C: 1=often true, 3=never true (should be: higher = more food insecurity)
         'FSD032A': {1: 2, 2: 1, 3: 0},
         'FSD032B': {1: 2, 2: 1, 3: 0},
         'FSD032C': {1: 2, 2: 1, 3: 0},
 
-        # ALQ121, ALQ142: 0=Never, 1=Every day → 10=1-2 times a year (should be: higher = more frequent)
+        # ALQ121, ALQ142: 0=Never, 1=Every day -> 10=1-2 times a year (should be: higher = more frequent)
         # 'ALQ121': {0: 0, 10: 1, 9: 2, 8: 3, 7: 4, 6: 5, 5: 6, 4: 7, 3: 8, 2: 9, 1: 10},
         'ALQ142': {0: 0, 10: 1, 9: 2, 8: 3, 7: 4, 6: 5, 5: 6, 4: 7, 3: 8, 2: 9, 1: 10},
 
         # DIQ010: 1=Yes, 2=No, 3=Borderline
-        # Correct order: No(0) → Borderline(1) → Yes(2)
+        # Correct order: No(0) -> Borderline(1) -> Yes(2)
         'DIQ010': {2: 0, 3: 1, 1: 2},  
         
         # FNQ520: 1=a little, 2=a lot, 3=somewhere in between
-        # Correct order: little(0) → between(1) → a lot(2)
+        # Correct order: little(0) -> between(1) -> a lot(2)
         'FNQ520': {1: 0, 3: 1, 2: 2},
     }
 
