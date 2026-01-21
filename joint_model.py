@@ -7,7 +7,7 @@ class JointModel(nn.Module):
 	def __init__( self, n_features, embedding_size, l, device="cpu"):
 		super().__init__()
 
-		embedder = nn.Sequential(
+		self.embedder = nn.Sequential(
 			OrderedDict([
 				( 'linear1', nn.Linear( n_features, 100 ) ),
 				( 'activation1', nn.ReLU() ),
@@ -16,7 +16,7 @@ class JointModel(nn.Module):
 				( 'linear3', nn.Linear( 25, embedding_size ) )
 			])
 		).to(device)
-		classifier = nn.Sequential(
+		self.classifier = nn.Sequential(
 				( 'activation3', nn.ReLU()),
 				( 'linear4', nn.Linear( embedding_size, 2 ) ),
 				( 'softmax', nn.Softmax() )
@@ -24,7 +24,8 @@ class JointModel(nn.Module):
 
 		self.loss_clf = nn.CrossEntropyLoss()
 		self.loss_emb = nn.CrossEntropyLoss()
-		self.optim = torch.optim.Adam( mlp.parameters(), lr=1e-3 )
+		self.optim_clf = torch.optim.Adam( self.embedder.parameters(), lr=1e-3 )
+		self.optim_emb = torch.optim.Adam( self.classifier.parameters(), lr=1e-3 )
 		self.device = device
 		self.l = l
 
@@ -39,10 +40,12 @@ class JointModel(nn.Module):
 		return embedding_pred, y_pred
 
 	def backward( self, y_pred, y, embedding_pred, embedding ):
-		loss = self.loss_clf( y_pred, y ) + l*self.loss_emb( embedding_pred, embedding )
-		self.optim.zero_grad()
+		loss = self.loss_clf( y_pred, y ) + self.l*self.loss_emb( embedding_pred, embedding )
+		self.optim_clf.zero_grad()
+        self.optim_emb.zero_grad()
 		loss.backward()
-		self.optim.step()
+		self.optim_clf.step()
+		self.optim_emb.step()
 
 	def fit( self, X, y, embedding, epochs=100 ):
 		X = self.to_tensor( X, dtype=torch.float )
