@@ -4,7 +4,7 @@ from collections import OrderedDict
 from sklearn.metrics import confusion_matrix, f1_score, roc_auc_score, classification_report, mean_squared_error
 
 class SplitModel(nn.Module):
-	def __init__( self, n_features, embedding_size, optimizer, device="cpu" ):
+	def __init__( self, n_features, embedding_size, device="cpu" ):
 		super().__init__()
 
 		self.embedder = nn.Sequential(
@@ -70,7 +70,7 @@ def train_split_model( X_train, X_test, y_train, y_test, y_embed_train, y_embed_
 	n_features, n_samples = X_train.size()
 	embedding_size, _ = y_embed_train.size()
 
-	model = JointModel( n_features=n_features, embedding_size=embedding_size, l=0.3 )
+	model = JointModel( n_features=n_features, embedding_size=embedding_size )
 	model.fit( X_train, y_train, y_embed_train )
 	y_embed_pred_train, y_pred_train = model.predict( X_train )
 	y_embed_pred_test, y_pred_test = model.predict( X_test )
