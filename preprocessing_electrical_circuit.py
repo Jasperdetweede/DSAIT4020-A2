@@ -27,7 +27,7 @@ def gen_and_preprocess_ec_data( sample_count: int, test_split: float, random_sta
 	X_train, X_test, y_train, y_test, e_train, e_test = gen_and_split_ec_data( sample_count, test_split, random_state )
 
 	# Preprocess the features
-	X_train_preprocessed, X_test_preprocessed = preprocess_depression_data(X_train, X_test)
+	X_train_preprocessed, X_test_preprocessed = preprocess_ec_data(X_train, X_test)
 
 	return X_train_preprocessed, X_test_preprocessed, y_train, y_test,  e_train, e_test
 

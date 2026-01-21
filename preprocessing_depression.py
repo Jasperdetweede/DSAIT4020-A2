@@ -58,7 +58,7 @@ def split_depression_data(dataset, raw_data_folder, random_state, test_split):
     dataset['depressed'] = (depression_criteria).astype(int)
 
     # Get features from the depression file, so we can drop them in X
-    features_from_depression_file = list(pd.read_sas('{raw_data_folder}/targets/DPQ_L_Target_Depression.xpt', format='xport').drop(columns='SEQN').columns)
+    features_from_depression_file = list(pd.read_sas(f'{raw_data_folder}/targets/DPQ_L_Target_Depression.xpt', format='xport').drop(columns='SEQN').columns)
 
     # Define sets
     X = dataset.drop(columns=features_from_depression_file).drop(columns=['SEQN', 'depressed'])

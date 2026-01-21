@@ -1,7 +1,8 @@
 import torch
+import pandas as pd
 from torch import nn
 from collections import OrderedDict
-from sklearn.metrics import confusion_matrix, f1_score, roc_auc_score, classification_report, mean_squared_error
+from sklearn.metrics import confusion_matrix, f1_score, classification_report
 
 class JointModel(nn.Module):
 	def __init__( self, n_features, embedding_size, l, device="cpu"):
@@ -63,7 +64,7 @@ class JointModel(nn.Module):
 
 	def fit_predict( self, X, y, embedding, epochs=100 ):
 		self.fit( X, y, embedding, epochs )
-		return self.predict( X, False )
+		return self.predict( X )
 
 def train_joint_model( X_train, X_test, y_train, y_test, y_embed_train, y_embed_test, device="cpu" ):
 	n_features, n_samples = X_train.size()
@@ -71,13 +72,13 @@ def train_joint_model( X_train, X_test, y_train, y_test, y_embed_train, y_embed_
 
 	model = JointModel( n_features=n_features, embedding_size=embedding_size, l=0.3 )
 	model.fit( X_train, y_train, y_embed_train )
-	y_embed_pred_train, y_pred_train = model.predict( X_train )
+	# y_embed_pred_train, y_pred_train = model.predict( X_train )
 	y_embed_pred_test, y_pred_test = model.predict( X_test )
 
 	print("\n\n", "#"*40, "Joint MLP ", "#"*40)
 	print("F1 score:", f1_score(y_test, y_pred_test))
-	print(classification_report(y_test, y_pred))
-	print("Confusion matrix:\n", confusion_matrix(y_test, y_pred))
+	print(classification_report(y_test, y_pred_test))
+	print("Confusion matrix:\n", confusion_matrix(y_test, y_pred_test))
 
 
 if __name__ == "__main__":
