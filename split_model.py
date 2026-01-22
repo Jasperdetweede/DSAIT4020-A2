@@ -42,9 +42,10 @@ class SplitModel(nn.Module):
 	def backward( self, y_pred, y, embedding_pred, embedding ):
 		embedding_loss = self.loss_emb( embedding_pred, embedding )
 		classification_loss = self.loss_clf( y_pred, y )
-		self.optim_emb.zero_grad()
-		embedding_loss.backward()
-		self.optim_emb.step()
+		if embedding is not None:
+			self.optim_emb.zero_grad()
+			embedding_loss.backward()
+			self.optim_emb.step()
 		self.optim_clf.zero_grad()
 		classification_loss.backward()
 		self.optim_clf.step()
@@ -52,7 +53,8 @@ class SplitModel(nn.Module):
 	def fit( self, X, y, embedding, epochs=100 ):
 		X = self.to_tensor( X, dtype=torch.float )
 		y = self.to_tensor( y, dtype=torch.long )
-		embedding = self.to_tensor( embedding, dtype=torch.float )
+		if embedding is not None:
+			embedding = self.to_tensor( embedding, dtype=torch.float )
 		for _ in range( epochs ):
 			embedding_pred, y_pred = self.forward( X )
 			self.backward( y_pred, y, embedding_pred, embedding )

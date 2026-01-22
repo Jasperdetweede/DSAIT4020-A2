@@ -40,18 +40,22 @@ class JointModel(nn.Module):
 		y_pred = self.classifier(embedding_pred)
 		return embedding_pred, y_pred
 
-	def backward( self, y_pred, y, embedding_pred, embedding ):
-		loss = self.loss_clf( y_pred, y ) + self.l*self.loss_emb( embedding_pred, embedding )
+	def backward( self, y_pred, y, embedding_pred, embedding=None ):
+		if embedding is None:
+			loss = self.loss_clf( y_pred, y )
+		else:
+			loss = self.loss_clf( y_pred, y ) + self.l*self.loss_emb( embedding_pred, embedding )
 		self.optim_clf.zero_grad()
 		self.optim_emb.zero_grad()
 		loss.backward()
 		self.optim_clf.step()
 		self.optim_emb.step()
 
-	def fit( self, X, y, embedding, epochs=100 ):
+	def fit( self, X, y, embedding=None, epochs=100 ):
 		X = self.to_tensor( X, dtype=torch.float )
 		y = self.to_tensor( y, dtype=torch.long )
-		embedding = self.to_tensor( embedding, dtype=torch.float )
+		if embedding is not None:
+			embedding = self.to_tensor( embedding, dtype=torch.float )
 		for _ in range( epochs ):
 			embedding_pred, y_pred = self.forward( X )
 			self.backward( y_pred, y, embedding_pred, embedding )
