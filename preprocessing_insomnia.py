@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 
+from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import KBinsDiscretizer, OneHotEncoder, StandardScaler, FunctionTransformer
 from sklearn.pipeline import Pipeline
 from sklearn.compose import ColumnTransformer
@@ -10,6 +11,183 @@ from sklearn.decomposition import PCA
 from sklearn.impute import SimpleImputer
 
 import random
+
+###################################
+# Full pipeline
+###################################
+
+def clean_and_preprocess_insomnia_data(dataset: pd.DataFrame, raw_data_folder: str, test_split: float, random_state: int, miss_val_threshold: float):
+    '''
+    Takes a dataframe and splits it into the training set, the corresponding target embeddings and calculates a binary label. 
+
+    :param dataset: DataFrame containing the raw combined insomnia dataset, containing targets and SEQN
+    :param random_state: Random state for train/test split
+    :return: for train and test sets: X, y, y_embed
+    '''
+    
+    # Load train/test split
+    X_train, X_test, y_train, y_test, y_embed_train, y_embed_test = split_insomnia_data(dataset, raw_data_folder, random_state, test_split)
+
+    # Clean features 
+    X_train_clean, categorical, ordinal, numerical, columns_below_threshold = clean_data(X_train, miss_val_threshold)
+    X_test_clean, _, _, _, _ = clean_data(X_test, miss_val_threshold, columns_below_threshold)
+
+    # check if the sets match
+    assert set(categorical + ordinal + numerical) == set(X_train_clean.columns)
+    assert set(categorical + ordinal + numerical) == set(X_test_clean.columns)
+
+    # Preprocess the features
+    X_train_preprocessed, X_test_preprocessed = preprocess_insomnia_data(X_train_clean, X_test_clean, categorical, numerical, ordinal)
+
+    # there is not going to noise since we generate binary labels
+    # explain the inherent shortcomings
+
+    return X_train_preprocessed, X_test_preprocessed, y_train, y_test, y_embed_train, y_embed_test
+    
+
+###################################
+# Data Splitting
+###################################
+
+def split_insomnia_data(dataset, raw_data_folder, random_state, test_split):
+    '''
+    Splits the insomnia dataset and adds the binary labelling. 
+    
+    :param dataset: DataFrame containing the raw combined insomnia dataset, containing targets and SEQN
+    :param random_state: Random state for train/test split
+    :return: for train and test sets: X, y_binary, y_embed
+    '''
+
+    # Read dataset from csv
+    target_cols = ["SLQ300", "SLQ310", "SLD012", "SLQ320", "SLQ330", "SLD013"]
+
+    X = dataset.drop(columns=target_cols).drop(columns=["SEQN"])
+    y_targets = clean_targets(dataset[target_cols])
+    y = label_construction(y_targets)
+
+    # Assert correct shape and absence of SEQN column in features and targets
+    assert X.shape[0] == y_targets.shape[0], "Feature and target embedding row counts do not match"
+    assert X.shape[0] == y_targets.shape[0], "Feature and target binary row counts do not match"
+    assert X.columns.__contains__("SEQN") == False, "Feature set should not contain SEQN column"
+    assert y_targets.columns.__contains__("SEQN") == False, "Target embedding set should not contain SEQN column"
+
+    # Split into train and test sets 
+    X_train, X_test, y_train, y_test = train_test_split(
+        X,
+        y,
+        test_size=test_split,        
+        random_state=random_state,   
+        stratify=y       # preserve class balance
+    )
+
+    y_embed_train = y_targets.loc[X_train.index]
+    y_embed_test  = y_targets.loc[X_test.index]
+
+    return X_train, X_test, y_train, y_test, y_embed_train, y_embed_test
+
+def label_construction(data):
+
+    # CRITERIA #1:
+    # Difficulty initiating sleep.
+    # (In children, this may manifest as difficulty
+    # initiating sleep without caregiver intervention.)
+
+    # late criteria
+    late = (2 * 60 + 30)
+
+    # sleep time - weekday
+    t_st = hours_to_minutes(data, "SLQ300")
+    late_sleep_weekday = (minutes_after_midnight(t_st) >= late) & (minutes_after_midnight(t_st) < 6*60)
+
+
+    # sleep time - weekends
+    t_st_w = hours_to_minutes(data, "SLQ320")
+    late_sleep_weekend = (minutes_after_midnight(t_st_w) >= late) & (minutes_after_midnight(t_st_w) < 6*60)
+
+    late_sleep_always = (late_sleep_weekday | late_sleep_weekend)
+
+    # CRITERIA #3:
+    # Early-morning awakening with inability to return to sleep.
+
+    # early criteria
+
+    early = (5 * 60 + 30)
+
+    # wake time - weekday
+    t_wt = hours_to_minutes(data, "SLQ310")
+    wake_early_weekday = minutes_after_midnight(t_wt) <= early
+
+
+    # wake time - weekends
+    t_wt_w = hours_to_minutes(data, "SLQ330")
+    wake_early_weekend = minutes_after_midnight(t_wt_w) <= early
+
+    wake_early_always = (wake_early_weekday | wake_early_weekend)
+
+
+    # EXTRA CRITERIA: COMPARING STAYING IN BED TO SLEEP HOURS
+    total_min_spent_in_bed_weekday = (t_wt - t_st) % (24*60)
+
+    sleep_minutes_weekday = data["SLD012"] * 60
+
+    # how much of time in bed this person was not asleep
+
+    awake_in_bed_weekday = sleep_minutes_weekday + 90 <= total_min_spent_in_bed_weekday
+
+    total_min_spent_in_bed_weekend = (t_wt_w - t_st_w) % (24*60)
+
+    sleep_minutes_weekend = data["SLD013"] * 60
+
+    # how much of time in bed this person was not asleep
+
+    awake_in_bed_weekend = sleep_minutes_weekend + 90 <= total_min_spent_in_bed_weekend
+
+    awake_overall = (awake_in_bed_weekday | awake_in_bed_weekend)
+
+
+    # if it is insomnia
+    # i did not want to be too strict about this
+    insomnia = (late_sleep_always | wake_early_always | awake_overall)
+
+    insomnia = insomnia.fillna(False).astype(int)
+
+    print(insomnia.value_counts())
+
+    return insomnia
+
+
+def clean_targets(data):
+    data = data.copy()
+    # converting bytestrings
+    obj_cols = data.select_dtypes(include=["object"]).columns.to_list()
+    for col in obj_cols:
+        data[col] = data[col].apply(lambda x: x.decode("utf-8") if isinstance(x, (bytes, bytearray)) else x)
+        data[col] = data[col].replace(['', ' '], np.nan)
+
+    # handle our target columns
+    data = data.replace([77777, 99999, " ", "", "."], np.nan)
+
+    TIME_COLS = [
+        # wake time
+        "SLQ310",
+        # sleep time
+        "SLQ300",
+        # sleep time - weekends
+        "SLQ320",
+        # wake time - weekends
+        "SLQ330"
+    ]
+
+    # handling actual string b""s
+    for time_col in TIME_COLS:
+        data[time_col] = data[time_col].astype("string").str.replace(r'\bb', '', regex= True).str.replace("'", '', regex= True)
+
+    return data
+
+
+###################################
+# Data Cleaning
+###################################
 
 CAT_COLS = [
     # Accultiration
@@ -387,20 +565,8 @@ unit_of_measure = [
     "PAD810U",
 ]
 
-
-# # drop the columns that contain NaN values above a specified threshold
-def drop_cols_na(data, threshold):
-    cols = [col for col in data.columns if data[col].isna().sum()/data[col].shape[0]>threshold]
-    data = data.drop(cols, axis=1)
-    return data
-
-def sep_target(data, target_cols):
-    X = data.drop(columns=target_cols)
-    y = data[target_cols]
-    return X, y
-
 # cleaning X data
-def clean_data(data, threshold):
+def clean_data(data, threshold, columns_below_threshold=None):
 
     data = data.copy()
 
@@ -587,13 +753,14 @@ def clean_data(data, threshold):
     "DIQ060U"
     ]
 
-
     data = data.drop(columns=columns_to_drop, errors="ignore")
     data = data.drop(columns=unit_of_measure, errors="ignore")
 
 
     # remove the columns that have NaN values above a certain threshold
-    data = drop_cols_na(data, threshold)
+    if columns_below_threshold is None:
+        columns_below_threshold = [col for col in data.columns if data[col].isna().sum()/data[col].shape[0]>threshold]
+    data = data.drop(columns=columns_below_threshold, errors="ignore")
 
     data = data.loc[:,~data.columns.duplicated()]
 
@@ -677,40 +844,7 @@ def clean_data(data, threshold):
     # check if the length matches correctly
     print(set(categorical_cols) | set(ordinal_cols) | set(numerical_cols) == set(data.columns))
 
-
-    return data, categorical_cols, ordinal_cols, numerical_cols
-
-
-# clean our target columns
-
-def clean_targets(data):
-    data = data.copy()
-    # converting bytestrings
-    obj_cols = data.select_dtypes(include=["object"]).columns.to_list()
-    for col in obj_cols:
-        data[col] = data[col].apply(lambda x: x.decode("utf-8") if isinstance(x, (bytes, bytearray)) else x)
-        data[col] = data[col].replace(['', ' '], np.nan)
-
-    # handle our target columns
-    data = data.replace([77777, 99999, " ", "", "."], np.nan)
-
-    TIME_COLS = [
-        # wake time
-        "SLQ310",
-        # sleep time
-        "SLQ300",
-        # sleep time - weekends
-        "SLQ320",
-        # wake time - weekends
-        "SLQ330"
-    ]
-
-    # handling actual string b""s
-    for time_col in TIME_COLS:
-        data[time_col] = data[time_col].astype("string").str.replace(r'\bb', '', regex= True).str.replace("'", '', regex= True)
-
-    return data
-
+    return data, categorical_cols, ordinal_cols, numerical_cols, columns_below_threshold
 
 def hours_to_minutes(data, column):
     time = data[column].astype("string").str.split(':', expand=True)
@@ -726,80 +860,15 @@ def minutes_after_midnight(minutes):
 
     return time_between
 
-# binary
+###################################
+# Data Preprocessing
+###################################
 
-def label_construction(data):
+def preprocess_insomnia_data(
+        X_train, X_test,
+        categorical_columns, numerical_columns, ordinal_columns,
+    ):
 
-    # CRITERIA #1:
-    # Difficulty initiating sleep.
-    # (In children, this may manifest as difficulty
-    # initiating sleep without caregiver intervention.)
-
-    # late criteria
-    late = (2 * 60 + 30)
-
-    # sleep time - weekday
-    t_st = hours_to_minutes(data, "SLQ300")
-    late_sleep_weekday = (minutes_after_midnight(t_st) >= late) & (minutes_after_midnight(t_st) < 6*60)
-
-
-    # sleep time - weekends
-    t_st_w = hours_to_minutes(data, "SLQ320")
-    late_sleep_weekdend = (minutes_after_midnight(t_st_w) >= late) & (minutes_after_midnight(t_st_w) < 6*60)
-
-    late_sleep_always = (late_sleep_weekday | late_sleep_weekdend)
-
-    # CRITERIA #3:
-    # Early-morning awakening with inability to return to sleep.
-
-    # early criteria
-
-    early = (5 * 60 + 30)
-
-    # wake time - weekday
-    t_wt = hours_to_minutes(data, "SLQ310")
-    wake_early_weekday = minutes_after_midnight(t_wt) <= early
-
-
-    # wake time - weekends
-    t_wt_w = hours_to_minutes(data, "SLQ330")
-    wake_early_weekend = minutes_after_midnight(t_wt_w) <= early
-
-    wake_early_always = (wake_early_weekday | wake_early_weekend)
-
-
-    # EXTRA CRITERIA: COMPARING STAYING IN BED TO SLEEP HOURS
-    total_min_spent_in_bed_weekday = (t_wt - t_st) % (24*60)
-
-    sleep_minutes_weekday = data["SLD012"] * 60
-
-    # how much of time in bed this person was not asleep
-
-    awake_in_bed_weekday = sleep_minutes_weekday + 90 <= total_min_spent_in_bed_weekday
-
-    total_min_spent_in_bed_weekend = (t_wt_w - t_st_w) % (24*60)
-
-    sleep_minutes_weekend = data["SLD013"] * 60
-
-    # how much of time in bed this person was not asleep
-
-    awake_in_bed_weekend = sleep_minutes_weekend + 90 <= total_min_spent_in_bed_weekend
-
-    awake_overall = (awake_in_bed_weekday | awake_in_bed_weekend)
-
-
-    # if it is insomnia
-    # i did not want to be too strict about this
-    insomnia = (late_sleep_always | wake_early_always | awake_overall)
-
-    insomnia = insomnia.fillna(False).astype(int)
-
-    print(insomnia.value_counts())
-
-    return insomnia
-
-
-def get_preprocessed_pipeline(model, categorical_columns, numerical_columns, ordinal_columns):
     one_hot_encoder = OneHotEncoder(handle_unknown="ignore", sparse_output=True)
     scaler = StandardScaler()
 
@@ -821,25 +890,8 @@ def get_preprocessed_pipeline(model, categorical_columns, numerical_columns, ord
     remainder="drop",
     )
 
-    return Pipeline(steps=[("preprocessing", preprocess), ("training", model)])
+    pipeline = Pipeline(steps=[("preprocessing", preprocess)])
 
-
-pipeline = get_preprocessed_pipeline(model, X_categorical, X_numerical, X_ordinal)
-pipeline.fit(X_clean, y)
-
-def get_preprocessed_insomnia_data( threshold = 0.4 ):
-    data = pd.read_csv('processed_data/insomnia_data.csv')
-    target_cols = ["SLQ300", "SLQ310", "SLD012", "SLQ320", "SLQ330", "SLD013"]
-
-    # separate target columns
-    X_unclean, y_targets = sep_target(data, target_cols)
-
-    X_clean, X_categorical, X_ordinal, X_numerical = clean_data(X_unclean, threshold)
-    y_targets = clean_targets(y_targets)
-    y = label_construction(y_targets)
-
-    # there is not going to noise since we generate binary labels
-    # explain the inherent shortcomings
-
-    # check if the length matches
-    len(X_categorical) + len(X_ordinal) + len(X_numerical) == X_clean.shape[1]
+    X_train_preprocessed = pipeline.fit_transform(X_train)
+    X_test_preprocessed = pipeline.transform(X_test)
+    return X_train_preprocessed, X_test_preprocessed
