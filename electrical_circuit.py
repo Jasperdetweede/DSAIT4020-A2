@@ -84,12 +84,13 @@ class ElectricalCircuit:
 			self.Vh,
 			self.thresholds
 		]
-		return pd.DataFrame( vals )
+		return pd.DataFrame( vals ).T
 
 	def get_embedding( self ):
-		return pd.DataFrame( [ self.Ra, self.Rb, self.Rc, self.Rd, self.Re, self.Rf, self.Rg, self.Rh ] )
+		return pd.DataFrame( [ self.Ra, self.Rb, self.Rc, self.Rd, self.Re, self.Rf, self.Rg, self.Rh ] ).T
 
 if __name__ == "__main__":
 	ec = ElectricalCircuit()
 	X, y = ec.gen_random_samples( 100000 )
-	print( y.sum() )
+	e = ec.get_embedding()
+	print( X.shape, e.shape, y.shape )

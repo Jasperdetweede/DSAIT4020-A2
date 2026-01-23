@@ -78,7 +78,7 @@ def preprocess_ec_data(X_train, X_test):
 	preprocessing_pipeline = ColumnTransformer(transformers=[
 		('num', Pipeline([
 			('scaler', StandardScaler())
-		]), numerical_cols)
+		]), X_train.columns.to_list())
 	])
 
 	# Fit pipeline to training data
