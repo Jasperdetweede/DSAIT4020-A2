@@ -39,40 +39,48 @@ class DeepJointModel(nn.Module):
 		self.device = device
 		self.l = l
 
-	def to_tensor( self, X, dtype=torch.float ):
-		if isinstance( X, pd.DataFrame ):
-			X = X.values
-		return torch.tensor( X, dtype=dtype ).to(self.device)
-
 	def forward( self, X ):
 		embedding_pred = self.regressor(X)
 		y_pred = self.classifier(embedding_pred)
 		return embedding_pred, y_pred
 
 	def backward( self, y_pred, y, embedding_pred, embedding=None ):
-		loss = self.loss_clf( y_pred, y.view(-1) )
+		loss = self.loss_clf( y_pred, y )
 		if embedding is not None:
 			loss += self.l * self.loss_emb( embedding_pred, embedding )
 		self.optim.zero_grad()
 		loss.backward()
 		self.optim.step()
 
-	def fit( self, X, y, embedding=None, epochs=100 ):
-		X = self.to_tensor( X, dtype=torch.float )
-		y = self.to_tensor( y, dtype=torch.long )
-		if embedding is not None:
-			embedding = self.to_tensor( embedding, dtype=torch.float )
+	def fit( self, dataloader, epochs=100 ):
 		self.train()
-		for _ in range( epochs ):
-			embedding_pred, y_pred = self.forward( X )
-			self.backward( y_pred, y, embedding_pred, embedding )
+		for i in range( epochs ):
+			percentage = i / epochs
+			progress = int( 50 * percentage )
+			print( "\rTraining:\t" + "#" * ( progress ) + "-" * int( 50 - progress ) + f"\t[{100*percentage:.1f}%]", end="" )
+			for X, y, embedding in dataloader:
+				X, y = X.to(self.device), y.to(self.device)
+				if embedding is not None:
+					embedding = embedding.to(self.device)
 
-	def predict( self, X ):
-		X = self.to_tensor( X, dtype=torch.float )
+				e_pred, y_pred = self.forward( X )
+				self.backward( y_pred, y, e_pred, embedding )
+		print()
+
+	def predict( self, dataloader ):
 		self.eval()
+		e_preds = []
+		y_preds = []
 		with torch.no_grad():
-			embedding_pred, y_pred = self.forward( X )
-			return embedding_pred, torch.argmax( y_pred, dim=1 ).cpu().numpy()
+			for X, _, _ in dataloader:
+				X = X.to(self.device)
+				e_pred, y_pred = self.forward( X )
+				e_preds.append(e_pred)
+				y_preds.append(y_pred)
+			
+			e_preds = torch.cat(e_preds)
+			y_preds = torch.cat(y_preds)
+			return e_preds.cpu().numpy(), torch.argmax( y_preds, dim=1 ).cpu().numpy()
 
 	def fit_predict( self, X, y, embedding=None, epochs=100 ):
 		self.fit( X, y, embedding, epochs )
@@ -116,11 +124,6 @@ class DeepSplitModel(nn.Module):
 		self.device = device
 		self.to(device)
 
-	def to_tensor( self, X, dtype=torch.float ):
-		if isinstance( X, pd.DataFrame ):
-			X = X.values
-		return torch.tensor( X, dtype=dtype ).to(self.device)
-
 	def forward( self, X ):
 		embedding_pred = self.regressor( X )
 		embedding_copy = embedding_pred.clone().detach()
@@ -128,7 +131,7 @@ class DeepSplitModel(nn.Module):
 		return embedding_pred, y_pred
 	
 	def backward( self, y_pred, y, embedding_pred, embedding ):
-		classification_loss = self.loss_clf( y_pred, y.view(-1) )
+		classification_loss = self.loss_clf( y_pred, y )
 		if embedding is not None:
 			embedding_loss = self.loss_emb( embedding_pred, embedding )
 			self.optim_emb.zero_grad()
@@ -142,20 +145,35 @@ class DeepSplitModel(nn.Module):
 			classification_loss.backward()
 			self.optim_e2e.step()
 
-	def fit( self, X, y, embedding=None, epochs=100 ):
-		X = self.to_tensor( X, dtype=torch.float )
-		y = self.to_tensor( y, dtype=torch.long )
-		if embedding is not None:
-			embedding = self.to_tensor( embedding, dtype=torch.float )
-		for _ in range( epochs ):
-			embedding_pred, y_pred = self.forward( X )
-			self.backward( y_pred, y, embedding_pred, embedding )
+	def fit( self, dataloader, epochs=100 ):
+		self.train()
+		for i in range( epochs ):
+			percentage = i / epochs
+			progress = int( 50 * percentage )
+			print( "\rTraining:\t" + "#" * ( progress ) + "-" * int( 50 - progress ) + f"\t[{100*percentage:.1f}%]", end="" )
+			for X, y, embedding in dataloader:
+				X, y = X.to(self.device), y.to(self.device)
+				if embedding is not None:
+					embedding = embedding.to(self.device)
 
-	def predict( self, X ):
-			X = self.to_tensor( X, dtype=torch.float )
-			with torch.no_grad():
-				embedding_pred, y_pred = self.forward( X )
-				return embedding_pred.cpu().numpy(), torch.argmax( y_pred, dim=1 ).cpu().numpy()
+				e_pred, y_pred = self.forward( X )
+				self.backward( y_pred, y, e_pred, embedding )
+		print()
+
+	def predict( self, dataloader ):
+		self.eval()
+		e_preds = []
+		y_preds = []
+		with torch.no_grad():
+			for X, _, _ in dataloader:
+				X = X.to(self.device)
+				e_pred, y_pred = self.forward( X )
+				e_preds.append(e_pred)
+				y_preds.append(y_pred)
+			
+			e_preds = torch.cat(e_preds)
+			y_preds = torch.cat(y_preds)
+			return e_preds.cpu().numpy(), torch.argmax( y_preds, dim=1 ).cpu().numpy()
 
 	def fit_predict( self, X, y, embedding=None, epochs=100 ):
 		self.fit( X, y, embedding, epochs )

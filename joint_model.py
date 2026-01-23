@@ -1,5 +1,4 @@
 import torch
-import pandas as pd
 from torch import nn
 from collections import OrderedDict
 
@@ -32,45 +31,52 @@ class JointModel(nn.Module):
 		self.to(device)
 		self.l = l
 
-	def to_tensor( self, X, dtype=torch.float ):
-		if isinstance( X, pd.DataFrame ):
-			X = X.values
-		return torch.tensor( X, dtype=dtype ).to(self.device)
-
 	def forward( self, X ):
 		e_pred = self.regressor(X)
 		y_pred = self.classifier(e_pred)
 		return e_pred, y_pred
 
 	def backward( self, y_pred, y_true, e_pred, e_true=None ):
-		loss = self.loss_clf( y_pred, y_true.view(-1) )
+		loss = self.loss_clf( y_pred, y_true )
 		if e_true is not None:
 			loss += self.l * self.loss_reg( e_pred, e_true )
 		self.optim.zero_grad()
 		loss.backward()
 		self.optim.step()
 
-	def fit( self, X, y, embedding=None, epochs=100 ):
-		X = self.to_tensor( X, dtype=torch.float )
-		y = self.to_tensor( y, dtype=torch.long )
-		if embedding is not None:
-			embedding = self.to_tensor( embedding, dtype=torch.float )
-
+	def fit( self, dataloader, epochs=100 ):
 		self.train()
-		for _ in range( epochs ):
-			e_pred, y_pred = self.forward( X )
-			self.backward( y_pred, y, e_pred, embedding )
+		for i in range( epochs ):
+			percentage = i / epochs
+			progress = int( 50 * percentage )
+			print( "\rTraining:\t" + "#" * ( progress ) + "-" * int( 50 - progress ) + f"\t[{100*percentage:.1f}%]", end="" )
+			for X, y, embedding in dataloader:
+				X, y = X.to(self.device), y.to(self.device)
+				if embedding is not None:
+					embedding = embedding.to(self.device)
 
-	def predict( self, X ):
-		X = self.to_tensor( X, dtype=torch.float )
+				e_pred, y_pred = self.forward( X )
+				self.backward( y_pred, y, e_pred, embedding )
+		print()
+
+	def predict( self, dataloader ):
 		self.eval()
+		e_preds = []
+		y_preds = []
 		with torch.no_grad():
-			e_pred, y_pred = self.forward( X )
-			return e_pred.cpu().numpy(), torch.argmax( y_pred, dim=1 ).cpu().numpy()
+			for X, _, _ in dataloader:
+				X = X.to(self.device)
+				e_pred, y_pred = self.forward( X )
+				e_preds.append(e_pred)
+				y_preds.append(y_pred)
+			
+			e_preds = torch.cat(e_preds)
+			y_preds = torch.cat(y_preds)
+			return e_preds.cpu().numpy(), torch.argmax( y_preds, dim=1 ).cpu().numpy()
 
-	def fit_predict( self, X, y, embedding=None, epochs=100 ):
-		self.fit( X, y, embedding, epochs )
-		return self.predict( X )
+	def fit_predict( self, dataloader, epochs=100 ):
+		self.fit( dataloader, epochs )
+		return self.predict( dataloader )
 
 if __name__ == "__main__":
 	print("Usage only as a module, provides class JointModel( n_features, embedding_size, l, device=\"cpu\" )")
