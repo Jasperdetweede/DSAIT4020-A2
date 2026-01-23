@@ -23,13 +23,19 @@ class DeepJointModel(nn.Module):
 				( 'activation6', nn.ReLU()),
 				( 'linear7', nn.Linear( 25, hidden_size ) )
 			])
-		).to(device)
+		)
 
 		self.classifier = nn.Sequential(
 			OrderedDict([
-				( 'linear1', nn.Linear(hidden_size, 4) ),
+				( 'linear1', nn.Linear(hidden_size, 10) ),
 				( 'activation1', nn.ReLU() ),
-				( 'linear2', nn.Linear( 4, 2 ) )
+				( 'linear2', nn.Linear(10, 10) ),
+				( 'activation2', nn.ReLU() ),
+				( 'linear3', nn.Linear(10, 10) ),
+				( 'activation3', nn.ReLU() ),
+				( 'linear4', nn.Linear(10, 4) ),
+				( 'activation4', nn.ReLU() ),
+				( 'linear5', nn.Linear( 4, 2 ) )
 			])
 		)
 
@@ -38,6 +44,7 @@ class DeepJointModel(nn.Module):
 		self.optim = torch.optim.Adam(self.parameters(), lr=1e-3)
 		self.device = device
 		self.l = l
+		self.to(device)
 
 	def forward( self, X ):
 		embedding_pred = self.regressor(X)
@@ -110,9 +117,15 @@ class DeepSplitModel(nn.Module):
 
 		self.classifier = nn.Sequential(
 			OrderedDict([
-				( 'linear1', nn.Linear(hidden_size, 4) ),
+				( 'linear1', nn.Linear(hidden_size, 10) ),
 				( 'activation1', nn.ReLU() ),
-				( 'linear2', nn.Linear( 4, 2 ) )
+				( 'linear2', nn.Linear(10, 10) ),
+				( 'activation2', nn.ReLU() ),
+				( 'linear3', nn.Linear(10, 10) ),
+				( 'activation3', nn.ReLU() ),
+				( 'linear4', nn.Linear(10, 4) ),
+				( 'activation4', nn.ReLU() ),
+				( 'linear5', nn.Linear( 4, 2 ) )
 			])
 		)
 
@@ -124,10 +137,14 @@ class DeepSplitModel(nn.Module):
 		self.device = device
 		self.to(device)
 
-	def forward( self, X ):
+	def forward( self, X, end_to_end=True ):
 		embedding_pred = self.regressor( X )
-		embedding_copy = embedding_pred.clone().detach()
-		y_pred = self.classifier( embedding_copy )
+		if end_to_end:
+			y_pred = self.classifier( embedding_pred )
+		else:
+			embedding_copy = embedding_pred.clone().detach()
+			y_pred = self.classifier( embedding_copy )
+
 		return embedding_pred, y_pred
 	
 	def backward( self, y_pred, y, embedding_pred, embedding ):
@@ -153,10 +170,11 @@ class DeepSplitModel(nn.Module):
 			print( "\rTraining:\t" + "#" * ( progress ) + "-" * int( 50 - progress ) + f"\t[{100*percentage:.1f}%]", end="" )
 			for X, y, embedding in dataloader:
 				X, y = X.to(self.device), y.to(self.device)
-				if embedding is not None:
+				end_to_end = embedding is None
+				if not end_to_end:
 					embedding = embedding.to(self.device)
 
-				e_pred, y_pred = self.forward( X )
+				e_pred, y_pred = self.forward( X, end_to_end )
 				self.backward( y_pred, y, e_pred, embedding )
 		print()
 
