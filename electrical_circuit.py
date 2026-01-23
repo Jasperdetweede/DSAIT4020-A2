@@ -37,16 +37,16 @@ class ElectricalCircuit:
 		if thresholds is not None:
 			self.thresholds = thresholds
 		else:
-			self.thresholds = np.round( rng.random( sample_count ) / 40, decimals = 4 )
+			self.thresholds = np.round( rng.random( sample_count ) / 500, decimals = 4 )
 		self.calculate_values()
 		return self.get_train_values(), self.is_light_on()
 
 	def calculate_values( self ):
-		Rde = ( self.Rd + self.Re ) / ( self.Rd * self.Re )
+		Rde = ( self.Rd * self.Re ) / ( self.Rd + self.Re )
 		Rcde = self.Rc + Rde
-		Rbcde = ( Rcde + self.Rb ) / ( Rcde * self.Rb )
-		Rfg = ( self.Rf + self.Rg ) / ( self.Rf * self.Rg )
-		total_resistance = Rbcde + Rfg + self.Rg
+		Rbcde = ( Rcde * self.Rb ) / ( Rcde + self.Rb )
+		Rfg = ( self.Rf * self.Rg ) / ( self.Rf + self.Rg )
+		total_resistance = self.Ra + Rbcde + Rfg + self.Rh
 
 		total_current = self.source_voltage / total_resistance
 
@@ -69,7 +69,7 @@ class ElectricalCircuit:
 		self.Vh = self.Ih * self.Rh
 
 	def is_light_on( self ):
-		return pd.DataFrame( self.If * self.Vf > self.thresholds )
+		return pd.DataFrame( ( self.If * self.Vf > self.thresholds ).astype(int) )
 
 	def get_train_values( self ):
 		vals = [
@@ -93,4 +93,7 @@ if __name__ == "__main__":
 	ec = ElectricalCircuit()
 	X, y = ec.gen_random_samples( 100000 )
 	e = ec.get_embedding()
-	print( X.shape, e.shape, y.shape )
+	print( X.head() )
+	print( e.head() )
+	print( y.head() )
+	print( y.value_counts() )
