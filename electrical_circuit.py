@@ -78,6 +78,7 @@ class ElectricalCircuit:
 			self.Ib,
 			self.Vc,
 			self.Id,
+			self.Ve * self.Ie,
 			self.Rd/( self.Ie + 1e-8 ),
 			self.Rf/( self.Ig + 1e-8 ),
 			self.Vg * self.Ig,

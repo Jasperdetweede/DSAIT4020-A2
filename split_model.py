@@ -2,32 +2,36 @@ import torch
 import pandas as pd
 from torch import nn
 from collections import OrderedDict
-from sklearn.metrics import confusion_matrix, f1_score, roc_auc_score, classification_report, mean_squared_error
 
 class SplitModel(nn.Module):
-	def __init__( self, n_features, embedding_size, device="cpu" ):
+	def __init__( self, n_features, hidden_size, device="cpu" ):
 		super().__init__()
 
-		self.embedder = nn.Sequential(
+		self.regressor = nn.Sequential(
 			OrderedDict([
 				( 'linear1', nn.Linear( n_features, 100 ) ),
 				( 'activation1', nn.ReLU() ),
 				( 'linear2', nn.Linear( 100, 25 ) ),
 				( 'activation2', nn.ReLU()),
-				( 'linear3', nn.Linear( 25, embedding_size ) )
+				( 'linear3', nn.Linear( 25, hidden_size ) )
 			])
-		).to(device)
-
-		self.classifier = nn.Sequential(
-			nn.ReLU(),
-			nn.Linear(embedding_size, 2)
 		)
 
-		self.loss_emb = nn.CrossEntropyLoss()
+		self.classifier = nn.Sequential(
+			OrderedDict([
+				( 'linear1', nn.Linear(hidden_size, 4) ),
+				( 'activation1', nn.ReLU() ),
+				( 'linear2', nn.Linear( 4, 2 ) )
+			])
+		)
+
+		self.loss_emb = nn.MSELoss()
 		self.loss_clf = nn.CrossEntropyLoss()
-		self.optim_emb = torch.optim.Adam(self.embedder.parameters(), lr=1e-3)
+		self.optim_emb = torch.optim.Adam(self.regressor.parameters(), lr=1e-3)
 		self.optim_clf = torch.optim.Adam(self.classifier.parameters(), lr=1e-3)
+		self.optim_e2e = torch.optim.Adam(self.parameters(), lr=1e-3)
 		self.device = device
+		self.to(device)
 
 	def to_tensor( self, X, dtype=torch.float ):
 		if isinstance( X, pd.DataFrame ):
@@ -35,22 +39,27 @@ class SplitModel(nn.Module):
 		return torch.tensor( X, dtype=dtype ).to(self.device)
 
 	def forward( self, X ):
-		embedding_pred = self.embedder( X )
-		y_pred = self.classifier( embedding_pred )
+		embedding_pred = self.regressor( X )
+		embedding_copy = embedding_pred.clone().detach()
+		y_pred = self.classifier( embedding_copy )
 		return embedding_pred, y_pred
 	
 	def backward( self, y_pred, y, embedding_pred, embedding ):
-		embedding_loss = self.loss_emb( embedding_pred, embedding )
-		classification_loss = self.loss_clf( y_pred, y )
+		classification_loss = self.loss_clf( y_pred, y.view(-1) )
 		if embedding is not None:
+			embedding_loss = self.loss_emb( embedding_pred, embedding )
 			self.optim_emb.zero_grad()
 			embedding_loss.backward()
 			self.optim_emb.step()
-		self.optim_clf.zero_grad()
-		classification_loss.backward()
-		self.optim_clf.step()
+			self.optim_clf.zero_grad()
+			classification_loss.backward()
+			self.optim_clf.step()
+		else:
+			self.optim_e2e.zero_grad()
+			classification_loss.backward()
+			self.optim_e2e.step()
 
-	def fit( self, X, y, embedding, epochs=100 ):
+	def fit( self, X, y, embedding=None, epochs=100 ):
 		X = self.to_tensor( X, dtype=torch.float )
 		y = self.to_tensor( y, dtype=torch.long )
 		if embedding is not None:
@@ -63,27 +72,11 @@ class SplitModel(nn.Module):
 			X = self.to_tensor( X, dtype=torch.float )
 			with torch.no_grad():
 				embedding_pred, y_pred = self.forward( X )
-				return torch.argmax( y_pred, dim=1 ).to(self.device).numpy()
+				return embedding_pred.cpu().numpy(), torch.argmax( y_pred, dim=1 ).cpu().numpy()
 
-	def fit_predict( self, X, y, embedding, epochs=100 ):
+	def fit_predict( self, X, y, embedding=None, epochs=100 ):
 		self.fit( X, y, embedding, epochs )
 		return self.predict( X )
 
-def train_split_model( X_train, X_test, y_train, y_test, y_embed_train, y_embed_test, device="cpu" ):
-	n_samples, n_features = X_train.shape
-	_, embedding_size = y_embed_train.shape
-
-	print(embedding_size, n_features)
-
-	model = SplitModel( n_features=n_features, embedding_size=embedding_size )
-	model.fit( X_train, y_train, y_embed_train )
-	# y_embed_pred_train, y_pred_train = model.predict( X_train )
-	y_embed_pred_test, y_pred_test = model.predict( X_test )
-
-	print("\n\n", "#"*40, "Split MLP ", "#"*40)
-	print("F1 score:", f1_score(y_test, y_pred_test))
-	print(classification_report(y_test, y_pred_test))
-	print("Confusion matrix:\n", confusion_matrix(y_test, y_pred_test))
-
 if __name__ == "__main__":
-	print("Usage only as a module, provides class SplitModel( n_features, embedding_size, device=\"cpu\" )")
+	print("Usage only as a module, provides class SplitModel( n_features, hidden_size, device=\"cpu\" )")
