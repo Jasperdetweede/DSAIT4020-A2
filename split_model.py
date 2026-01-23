@@ -17,16 +17,16 @@ class SplitModel(nn.Module):
 				( 'linear3', nn.Linear( 25, embedding_size ) )
 			])
 		).to(device)
+
 		self.classifier = nn.Sequential(
-				( 'activation3', nn.ReLU()),
-				( 'linear4', nn.Linear( embedding_size, 2 ) ),
-				( 'softmax', nn.Softmax() )
+			nn.ReLU(),
+			nn.Linear(embedding_size, 2)
 		)
 
 		self.loss_emb = nn.CrossEntropyLoss()
 		self.loss_clf = nn.CrossEntropyLoss()
-		self.optim_clf = torch.optim.Adam( self.embedder.parameters(), lr=1e-3 )
-		self.optim_emb = torch.optim.Adam( self.classifier.parameters(), lr=1e-3 )
+		self.optim_emb = torch.optim.Adam(self.embedder.parameters(), lr=1e-3)
+		self.optim_clf = torch.optim.Adam(self.classifier.parameters(), lr=1e-3)
 		self.device = device
 
 	def to_tensor( self, X, dtype=torch.float ):
@@ -63,15 +63,17 @@ class SplitModel(nn.Module):
 			X = self.to_tensor( X, dtype=torch.float )
 			with torch.no_grad():
 				embedding_pred, y_pred = self.forward( X )
-				return torch.argmax( y_pred, dim=1 ).to("cpu").numpy()
+				return torch.argmax( y_pred, dim=1 ).to(self.device).numpy()
 
 	def fit_predict( self, X, y, embedding, epochs=100 ):
 		self.fit( X, y, embedding, epochs )
 		return self.predict( X )
 
 def train_split_model( X_train, X_test, y_train, y_test, y_embed_train, y_embed_test, device="cpu" ):
-	n_features, n_samples = X_train.size()
-	embedding_size, _ = y_embed_train.size()
+	n_samples, n_features = X_train.shape
+	_, embedding_size = y_embed_train.shape
+
+	print(embedding_size, n_features)
 
 	model = SplitModel( n_features=n_features, embedding_size=embedding_size )
 	model.fit( X_train, y_train, y_embed_train )
