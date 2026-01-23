@@ -24,7 +24,7 @@ class CustomDataset(Dataset):
 		return self.X[idx], self.y[idx], self.embedding[idx]
 
 	def to_tensor( self, X, dtype=torch.float ):
-		if isinstance( X, pd.DataFrame ):
+		if isinstance( X, pd.DataFrame ) or isinstance( X, pd.Series ):
 			X = X.values
 		return torch.tensor( X, dtype=dtype )
 
