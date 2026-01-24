@@ -27,8 +27,8 @@ def train_multitarget_baseline(model, is_classifier, X_train, X_test, y_embed_tr
 
     # Evaluate
     if is_classifier:
-        metric_train = np.mean(y_pred_train == y_embed_train.values, axis=0)
-        metric_test = np.mean(y_pred_test == y_embed_test.values, axis=0)
+        metric_train = np.mean(y_pred_train == y_embed_train, axis=0)
+        metric_test = np.mean(y_pred_test == y_embed_test, axis=0)
         metric_name = "accuracy"
     else:
         metric_train = mean_squared_error(y_embed_train, y_pred_train, multioutput='raw_values')

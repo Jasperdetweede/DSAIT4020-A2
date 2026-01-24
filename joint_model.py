@@ -56,21 +56,41 @@ class JointModel(nn.Module):
 			percentage = i / epochs
 			progress = int( 50 * percentage )
 			print( "\rTraining:\t" + "#" * ( progress ) + "-" * int( 50 - progress ) + f"\t[{100*percentage:.1f}%]", end="" )
-			for X, y, embedding in dataloader:
+			
+			for batch in dataloader:
+
+				# Check if type dataloader has embedding or not
+				if len(batch) == 3:
+					X, y, embedding = batch
+				elif len(batch) == 2:
+					X, y = batch
+					embedding = None
+				else:
+					raise ValueError("DataLoader must have 2 or 3 elements per batch.")
+
 				X, y = X.to(self.device), y.to(self.device)
 				if embedding is not None:
 					embedding = embedding.to(self.device)
 
-				e_pred, y_pred = self.forward( X )
-				self.backward( y_pred, y, e_pred, embedding )
-		print()
+				e_pred, y_pred = self.forward(X)
+				self.backward(y_pred, y, e_pred, embedding)
+
 
 	def predict( self, dataloader ):
 		self.eval()
 		e_preds = []
 		y_preds = []
 		with torch.no_grad():
-			for X, _, _ in dataloader:
+			for batch in dataloader:
+
+				# Check if type dataloader has embedding or not
+				if len(batch) == 3:
+					X, _, _ = batch
+				elif len(batch) == 2:
+					X, _ = batch
+				else:
+					raise ValueError("DataLoader must have 2 or 3 elements per batch.")
+
 				X = X.to(self.device)
 				e_pred, y_pred = self.forward( X )
 				e_preds.append(e_pred)

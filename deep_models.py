@@ -65,21 +65,40 @@ class DeepJointModel(nn.Module):
 			percentage = i / epochs
 			progress = int( 50 * percentage )
 			print( "\rTraining:\t" + "#" * ( progress ) + "-" * int( 50 - progress ) + f"\t[{100*percentage:.1f}%]", end="" )
-			for X, y, embedding in dataloader:
+			
+			for batch in dataloader:
+
+				# Check if type dataloader has embedding or not
+				if len(batch) == 3:
+					X, y, embedding = batch
+				elif len(batch) == 2:
+					X, y = batch
+					embedding = None
+				else:
+					raise ValueError("DataLoader must have 2 or 3 elements per batch.")
+
 				X, y = X.to(self.device), y.to(self.device)
 				if embedding is not None:
 					embedding = embedding.to(self.device)
 
-				e_pred, y_pred = self.forward( X )
-				self.backward( y_pred, y, e_pred, embedding )
-		print()
+				e_pred, y_pred = self.forward(X)
+				self.backward(y_pred, y, e_pred, embedding)
 
 	def predict( self, dataloader ):
 		self.eval()
 		e_preds = []
 		y_preds = []
 		with torch.no_grad():
-			for X, _, _ in dataloader:
+			for batch in dataloader:
+
+				# Check if type dataloader has embedding or not
+				if len(batch) == 3:
+					X, _, _ = batch
+				elif len(batch) == 2:
+					X, _ = batch
+				else:
+					raise ValueError("DataLoader must have 2 or 3 elements per batch.")
+
 				X = X.to(self.device)
 				e_pred, y_pred = self.forward( X )
 				e_preds.append(e_pred)
@@ -89,9 +108,9 @@ class DeepJointModel(nn.Module):
 			y_preds = torch.cat(y_preds)
 			return e_preds.cpu().numpy(), torch.argmax( y_preds, dim=1 ).cpu().numpy()
 
-	def fit_predict( self, X, y, embedding=None, epochs=100 ):
-		self.fit( X, y, embedding, epochs )
-		return self.predict( X )
+	def fit_predict( self, dataloader, epochs=100 ):
+		self.fit( dataloader, epochs )
+		return self.predict( dataloader )
 
 class DeepSplitModel(nn.Module):
 	def __init__( self, n_features, hidden_size, device="cpu" ):
@@ -168,22 +187,42 @@ class DeepSplitModel(nn.Module):
 			percentage = i / epochs
 			progress = int( 50 * percentage )
 			print( "\rTraining:\t" + "#" * ( progress ) + "-" * int( 50 - progress ) + f"\t[{100*percentage:.1f}%]", end="" )
-			for X, y, embedding in dataloader:
+			
+			for batch in dataloader:
+
+				# Check if type dataloader has embedding or not
+				if len(batch) == 3:
+					X, y, embedding = batch
+				elif len(batch) == 2:
+					X, y = batch
+					embedding = None
+				else:
+					raise ValueError("DataLoader must have 2 or 3 elements per batch.")
+
 				X, y = X.to(self.device), y.to(self.device)
+				
 				end_to_end = embedding is None
 				if not end_to_end:
 					embedding = embedding.to(self.device)
 
 				e_pred, y_pred = self.forward( X, end_to_end )
 				self.backward( y_pred, y, e_pred, embedding )
-		print()
 
 	def predict( self, dataloader ):
 		self.eval()
 		e_preds = []
 		y_preds = []
 		with torch.no_grad():
-			for X, _, _ in dataloader:
+			for batch in dataloader:
+
+				# Check if type dataloader has embedding or not
+				if len(batch) == 3:
+					X, _, _ = batch
+				elif len(batch) == 2:
+					X, _ = batch
+				else:
+					raise ValueError("DataLoader must have 2 or 3 elements per batch.")
+
 				X = X.to(self.device)
 				e_pred, y_pred = self.forward( X )
 				e_preds.append(e_pred)
@@ -193,9 +232,9 @@ class DeepSplitModel(nn.Module):
 			y_preds = torch.cat(y_preds)
 			return e_preds.cpu().numpy(), torch.argmax( y_preds, dim=1 ).cpu().numpy()
 
-	def fit_predict( self, X, y, embedding=None, epochs=100 ):
-		self.fit( X, y, embedding, epochs )
-		return self.predict( X )
+	def fit_predict( self, dataloader, epochs=100 ):
+		self.fit( dataloader, epochs )
+		return self.predict( dataloader )
 
 if __name__ == "__main__":
 	print("Usage only as a module, provides class JointModel( n_features, hidden_size, l, device=\"cpu\" )")
