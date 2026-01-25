@@ -182,6 +182,14 @@ def clean_targets(data):
     for time_col in TIME_COLS:
         data[time_col] = data[time_col].astype("string").str.replace(r'\bb', '', regex= True).str.replace("'", '', regex= True)
 
+        time = data[time_col].astype("string").str.split(':', expand=True)
+        hours = pd.to_numeric(time[0], errors='coerce')
+        minutes = pd.to_numeric(time[1], errors='coerce')
+
+        full_minutes = hours * 60 + minutes
+        data[time_col] = full_minutes
+        
+
     return data
 
 
@@ -847,6 +855,10 @@ def clean_data(data, threshold, columns_below_threshold=None):
     return data, categorical_cols, ordinal_cols, numerical_cols, columns_below_threshold
 
 def hours_to_minutes(data, column):
+    col = data[column]
+    if pd.api.types.is_numeric_dtype(col):
+        return col
+
     time = data[column].astype("string").str.split(':', expand=True)
     hours = pd.to_numeric(time[0], errors='coerce')
     minutes = pd.to_numeric(time[1], errors='coerce')
