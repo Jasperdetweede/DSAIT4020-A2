@@ -8,11 +8,33 @@ class BaseModel(nn.Module, ABC):
 	"""=======================================
 	Base class to reduce boilerplate in models
 	======================================="""
-	def __init__( self, device="cpu" ):
+	def __init__( self, n_features, hidden_size, device="cpu" ):
 		super().__init__()
+		
+		self.regressor = nn.Sequential(
+			OrderedDict([
+				( 'linear1', nn.Linear( n_features, 100 ) ),
+				( 'activation1', nn.ReLU() ),
+				( 'linear2', nn.Linear( 100, 25 ) ),
+				( 'activation2', nn.ReLU()),
+				( 'linear3', nn.Linear( 25, hidden_size ) )
+			])
+		)
 
-		self.classifier = None
-		self.regressor = None
+		self.classifier = nn.Sequential(
+			OrderedDict([
+				( 'linear1', nn.Linear(hidden_size, 10) ),
+				( 'activation1', nn.ReLU() ),
+				#( 'linear2', nn.Linear(10, 10) ),
+				#( 'activation2', nn.ReLU() ),
+				#( 'linear3', nn.Linear(10, 10) ),
+				#( 'activation3', nn.ReLU() ),
+				( 'linear4', nn.Linear(10, 4) ),
+				( 'activation4', nn.ReLU() ),
+				( 'linear5', nn.Linear( 4, 2 ) )
+			])
+		)
+
 		self.loss_clf = nn.CrossEntropyLoss()
 		self.loss_reg = nn.MSELoss()
 		self.device = device

@@ -28,20 +28,6 @@ class DeepJointModel(JointModel):
 				( 'linear7', nn.Linear( 25, hidden_size ) )
 			])
 		)
-
-		self.classifier = nn.Sequential(
-			OrderedDict([
-				( 'linear1', nn.Linear(hidden_size, 10) ),
-				( 'activation1', nn.ReLU() ),
-				( 'linear2', nn.Linear(10, 10) ),
-				( 'activation2', nn.ReLU() ),
-				( 'linear3', nn.Linear(10, 10) ),
-				( 'activation3', nn.ReLU() ),
-				( 'linear4', nn.Linear(10, 4) ),
-				( 'activation4', nn.ReLU() ),
-				( 'linear5', nn.Linear( 4, 2 ) )
-			])
-		)
 		self.to(self.device)
 
 class DeepSplitModel(SplitModel):
@@ -66,20 +52,6 @@ class DeepSplitModel(SplitModel):
 				( 'linear6', nn.Linear( 50, 25 ) ),
 				( 'activation6', nn.ReLU()),
 				( 'linear7', nn.Linear( 25, hidden_size ) )
-			])
-		)
-
-		self.classifier = nn.Sequential(
-			OrderedDict([
-				( 'linear1', nn.Linear(hidden_size, 10) ),
-				( 'activation1', nn.ReLU() ),
-				( 'linear2', nn.Linear(10, 10) ),
-				( 'activation2', nn.ReLU() ),
-				( 'linear3', nn.Linear(10, 10) ),
-				( 'activation3', nn.ReLU() ),
-				( 'linear4', nn.Linear(10, 4) ),
-				( 'activation4', nn.ReLU() ),
-				( 'linear5', nn.Linear( 4, 2 ) )
 			])
 		)
 		self.to(self.device)
