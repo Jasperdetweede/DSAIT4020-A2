@@ -62,7 +62,7 @@ class BaseModel(nn.Module, ABC):
 
 	def fit( self, dataloader, epochs=100, early_stop_epochs=None ):
 		self.train()
-		last_loss, epochs_without_improvement = 1e10,  0
+		last_loss, epochs_without_improvement, early_stop_threshold = 1e10,  0, 5e-2
 		for i in range( epochs ):
 			percentage = i / epochs
 			progress = int( 50 * percentage )
@@ -84,11 +84,16 @@ class BaseModel(nn.Module, ABC):
 				if loss < last_loss:
 					last_loss = loss
 					epochs_without_improvement = 0
-				else:
+				elif last_loss - loss <= early_stop_threshold:
 					epochs_without_improvement += 1
+				else:
+					print( "\rTraining:\t" + "#" * ( progress ) + "-" * int( 50 - progress ) + f"\t[{100*percentage:.1f}% - DONE]\n" )
+					return
+				
 				if epochs_without_improvement >= early_stop_epochs:
-					break
-		print( "\tTraining:\t" + "#" * 50 + "\t[100%]" )
+					print( "\rTraining:\t" + "#" * ( progress ) + "-" * int( 50 - progress ) + f"\t[{100*percentage:.1f}% - DONE]\n" )
+					return
+		print( "\rTraining:\t" + "#" * 50 + "\t[100.0%]\n" )
 
 	def predict( self, dataloader ):
 		self.eval()
