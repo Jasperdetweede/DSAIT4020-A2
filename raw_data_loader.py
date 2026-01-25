@@ -22,6 +22,14 @@ def load_raw_data(raw_data_folder_path, target_file_path):
         # Remove rows with any missing values in the targets
         data = data[data[list(data.columns)].notnull().all(1)]
 
+        # Remove samples with useless data
+        if (raw_data_paths[0][0] == '/depression'):
+            data = data[~data.isin([7, 9]).any(axis=1)]
+            print("removed useless data")
+        elif(raw_data_paths[0][0] == '/insomnia'):
+            data = data[~data.isin([77777, 99999]).any(axis=1)]
+            print("removed useless data")
+
         for file_path in os.listdir(raw_data_folder_path + raw_data_paths[i][0]):
             if not file_path.endswith('.xpt'):
                 raise ValueError("Unsupported file format")
