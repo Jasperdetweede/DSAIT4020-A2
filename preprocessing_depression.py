@@ -113,42 +113,6 @@ def split_depression_data(dataset, raw_data_folder, random_state, test_split):
 
 def clean_depression_data(X_train: pd.DataFrame, X_test: pd.DataFrame, miss_val_threshold: float):
     '''
-    The following preprocessing is done: 
-
-        1. Remove id, unnecessary and target leakage columns
-        2. Drop columns with more than 50% missing values
-        3. Replace NHANES special codes (7/77/777, 9/99/999) with NaN
-
-        TODO: Finalize the text below, it currently does not fully match the code. 
-        4. Binary variables: convert to binary Yes/No (1/2) to (1/0)
-            - For example, DBQ930 - Main meal planner/preparer (1=Yes, 2=No, 7=Refused, 9=Don't know)
-        4. Categorical variables:
-            - Ordinal variables, e.g. FNQ410 - Food security status: 1=Full food security, 2=Marginal
-                - Preserve ordinality
-                - Convert to 0-indexed (0-3)
-        4. Continous variables:
-            - Frequency variables, e.g. ALQ121 - Alcohol frequency past 12 months), 0=Never in the pa
-                Convert to days per year for continuous analysis
-                # alq121_mapping = {
-                #     0: 0,      # Never
-                #     1: 365,    # Every day
-                #     2: 286,    # 5-6 days/week → ~5.5*52
-                #     3: 182,    # 3-4 days/week → ~3.5*52
-                #     4: 104,    # 2 days/week
-                #     5: 78,     # 1 day/week
-                #     6: 52,     # 2-3 days/month
-                #     7: 36,     # 1 day/month
-                #     8: 24,     # 7-11 times/year
-                #     9: 15,     # 3-6 times/year
-                #     10: 6      # 1-2 times/year
-                # }
-                # df['ALQ121_days'] = df['ALQ121'].map(alq121_mapping)
-            - Numerical measurements (WHD010=height, WHD020=weight, WHD050=desired weight): 
-                TODO: If there is a desired weight column, should we also keep the normal weight. It is now dropped after BMI calculation.
-                - Check for outliers and reasonable ranges
-                - Standardize units if necessary
-                - Create new features, e.g., BMI from height and weight
-    
     :param dataset: DataFrame containing the raw combined depression dataset, containing targets and SEQN
     :param random_state: Random state for train/test split
     :return: for train and test sets: X, y, y_embed
@@ -244,7 +208,7 @@ def identify_binary_columns(df, exclude_cols=[]):
         if col in exclude_cols:
             continue
         unique_vals = set(df[col].dropna().unique())
-        if unique_vals and unique_vals.issubset({1, 2, 1.0, 2.0}):
+        if unique_vals and (unique_vals.issubset({1, 2, 1.0, 2.0}) or unique_vals.issubset({0, 1, 0.0, 1.0})):
             binary_cols.append(col)
     return binary_cols
 
@@ -276,6 +240,8 @@ def convert_time_columns(df):
         if pd.isna(time_str):
             return np.nan
         try:
+            if isinstance(time_str, str) and time_str.startswith("b'") and time_str.endswith("'"):
+                time_str = time_str[2:-1]
             h, m = time_str.split(':')
             return int(h) + int(m) / 60
         except:
@@ -291,16 +257,7 @@ def calculate_bmi(df):
     # Calculate BMI from height and weight
     # WHD010 is in inches, WHD020 is in pounds
     df['BMI'] = (df['WHD020'] / (df['WHD010'] ** 2)) * 703
-
-    # BMI categories
-    df['BMI_category'] = pd.cut(df['BMI'], 
-                                bins=[0, 18.5, 25, 30, float('inf')],
-                                labels=['underweight', 'normal', 'overweight', 'obese'])
-
     df.drop(columns=['WHD010', 'WHD020'], inplace=True)
-
-
-    df['BMI_category'] = df['BMI_category'].astype(str)
     return df
 
 def calculate_total_alcohol_consumption(df):
@@ -452,3 +409,4 @@ def preprocess_depression_data(X_train, X_test):
     X_test_preprocessed = preprocessing_pipeline.transform(X_test)
 
     return X_train_preprocessed, X_test_preprocessed
+
