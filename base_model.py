@@ -84,7 +84,7 @@ class BaseModel(nn.Module, ABC):
 				if loss < last_loss:
 					last_loss = loss
 					epochs_without_improvement = 0
-				elif last_loss - loss <= early_stop_threshold:
+				elif last_loss - loss <= early_stop_threshold * last_loss:
 					epochs_without_improvement += 1
 				else:
 					print( "\rTraining:\t" + "#" * ( progress ) + "-" * int( 50 - progress ) + f"\t[{100*percentage:.1f}% - DONE]\n" )
