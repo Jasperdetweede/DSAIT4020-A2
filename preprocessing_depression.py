@@ -30,6 +30,21 @@ def clean_and_preprocess_depression_data(dataset: pd.DataFrame, raw_data_folder:
     # Preprocess the features
     X_train_preprocessed, X_test_preprocessed = preprocess_depression_data(X_train_cleaned, X_test_cleaned)
 
+    target_embed_cols = ['DPQ010','DPQ020','DPQ030','DPQ040','DPQ050','DPQ060','DPQ070','DPQ080','DPQ090']
+
+    # Drop rows where any target column has value 7 or 9
+    valid_train_indices = y_embed_train[~y_embed_train[target_embed_cols].isin([7, 9]).any(axis=1)].index
+    valid_test_indices  = y_embed_test[~y_embed_test[target_embed_cols].isin([7, 9]).any(axis=1)].index
+
+    # Filter preprocessed features and targets
+    X_train_preprocessed = X_train_preprocessed[np.isin(X_train.index, valid_train_indices)]
+    y_train = y_train.loc[valid_train_indices]
+    y_embed_train = y_embed_train.loc[valid_train_indices]
+
+    X_test_preprocessed = X_test_preprocessed[np.isin(X_test.index, valid_test_indices)]
+    y_test = y_test.loc[valid_test_indices]
+    y_embed_test = y_embed_test.loc[valid_test_indices]
+
     return X_train_preprocessed, X_test_preprocessed, y_train, y_test, y_embed_train, y_embed_test
 
 

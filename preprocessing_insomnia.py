@@ -38,9 +38,20 @@ def clean_and_preprocess_insomnia_data(dataset: pd.DataFrame, raw_data_folder: s
 
     # Preprocess the features
     X_train_preprocessed, X_test_preprocessed = preprocess_insomnia_data(X_train_clean, X_test_clean, categorical, numerical, ordinal)
+    
+    target_cols = ["SLQ300", "SLQ310", "SLD012", "SLQ320", "SLQ330", "SLD013"]
 
-    # there is not going to noise since we generate binary labels
-    # explain the inherent shortcomings
+    # Drop rows where any of the target columns are NaN
+    not_nan_indices_train = y_embed_train[target_cols].dropna(how='any').index
+    not_nan_indices_test  = y_embed_test[target_cols].dropna(how='any').index
+
+    X_train_preprocessed = X_train_preprocessed[np.isin(X_train.index, not_nan_indices_train)]
+    y_train = y_train.loc[not_nan_indices_train]
+    y_embed_train = y_embed_train.loc[not_nan_indices_train]
+
+    X_test_preprocessed = X_test_preprocessed[np.isin(X_test.index, not_nan_indices_test)]
+    y_test = y_test.loc[not_nan_indices_test]
+    y_embed_test = y_embed_test.loc[not_nan_indices_test]
 
     return X_train_preprocessed, X_test_preprocessed, y_train, y_test, y_embed_train, y_embed_test
     
