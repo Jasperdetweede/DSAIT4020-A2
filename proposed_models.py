@@ -100,13 +100,14 @@ def train_proposal_model( datasets, model, title, batch_size=32, epochs=1000, au
 	dataloader_train_no_e = DataLoader( datasets["train_no_e"], batch_size=batch_size, shuffle=False )
 	dataloader_test = DataLoader( datasets["test"], batch_size=batch_size, shuffle=False )
 
-	model.fit( dataloader_train_w_e, epochs=epochs, early_stop_epochs=early_stop_epochs )
+	e_pred_train, y_pred_train = model.fit_predict( dataloader_train_w_e, epochs=epochs, early_stop_epochs=early_stop_epochs )
+	present_model_metrics( datasets["train_w_e"].y, y_pred_train, datasets["train_w_e"].embedding, e_pred_train, title=f"{title} MLP [Training]" )
 	e_pred_test, y_pred_test = model.predict( dataloader_test )
-	present_model_metrics( datasets["test"].y, y_pred_test, datasets["test"].embedding, e_pred_test, title=f"{title} MLP" )
+	present_model_metrics( datasets["test"].y, y_pred_test, datasets["test"].embedding, e_pred_test, title=f"{title} MLP [Testing]" )
 
 	model.fit( dataloader_train_no_e, epochs=augment_epochs, early_stop_epochs=early_stop_epochs )
 	e_pred_test, y_pred_test = model.predict( dataloader_test )
-	present_model_metrics( datasets["test"].y, y_pred_test, datasets["test"].embedding, e_pred_test, title=f"{title} MLP (Augmented)" )
+	present_model_metrics( datasets["test"].y, y_pred_test, datasets["test"].embedding, e_pred_test, title=f"{title} MLP (Augmented) [Testing]" )
 
 def present_model_metrics( y_true, y_pred, e_true, e_pred, title ):
 	len_eqs = (74 - len(title))//2

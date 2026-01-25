@@ -162,7 +162,7 @@ def label_construction(data):
 
     insomnia = insomnia.fillna(False).astype(int)
 
-    print(insomnia.value_counts())
+    #print(insomnia.value_counts())
 
     return insomnia
 
@@ -856,12 +856,12 @@ def clean_data(data, threshold, columns_below_threshold=None):
     categorical_cols += [col for col in data.columns if col not in known_cols]
 
     # check overlaps
-    print(len(set(categorical_cols) & set(ordinal_cols)) == 0)
-    print(len(set(categorical_cols) & set(numerical_cols)) == 0)
-    print(len(set(numerical_cols) & set(ordinal_cols)) == 0)
+    #print(len(set(categorical_cols) & set(ordinal_cols)) == 0)
+    #print(len(set(categorical_cols) & set(numerical_cols)) == 0)
+    #print(len(set(numerical_cols) & set(ordinal_cols)) == 0)
 
     # check if the length matches correctly
-    print(set(categorical_cols) | set(ordinal_cols) | set(numerical_cols) == set(data.columns))
+    #print(set(categorical_cols) | set(ordinal_cols) | set(numerical_cols) == set(data.columns))
 
     return data, categorical_cols, ordinal_cols, numerical_cols, columns_below_threshold
 
