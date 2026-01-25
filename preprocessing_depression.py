@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+from scipy import sparse as sci
 
 from sklearn.model_selection import train_test_split
 
@@ -35,6 +36,11 @@ def clean_and_preprocess_depression_data(dataset: pd.DataFrame, raw_data_folder:
     # Drop rows where any target column has value 7 or 9
     valid_train_indices = y_embed_train[~y_embed_train[target_embed_cols].isin([7, 9]).any(axis=1)].index
     valid_test_indices  = y_embed_test[~y_embed_test[target_embed_cols].isin([7, 9]).any(axis=1)].index
+
+    assert not isinstance(X_train_preprocessed, sci.spmatrix), \
+       "X_train_preprocessed is still a sparse matrix! Convert to dense before indexing."
+    assert not isinstance(X_test_preprocessed, sci.spmatrix), \
+        "X_test_preprocessed is still a sparse matrix! Convert to dense before indexing."
 
     # Filter preprocessed features and targets
     X_train_preprocessed = X_train_preprocessed[np.isin(X_train.index, valid_train_indices)]
