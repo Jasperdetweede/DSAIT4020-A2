@@ -80,8 +80,8 @@ def split_insomnia_data(dataset, raw_data_folder, random_state, test_split):
         stratify=y       # preserve class balance
     )
 
-    y_embed_train = y_targets.loc[X_train.index]
-    y_embed_test  = y_targets.loc[X_test.index]
+    y_embed_train = y_targets.loc[X_train.index].astype(float)
+    y_embed_test  = y_targets.loc[X_test.index].astype(float)
 
     return X_train, X_test, y_train, y_test, y_embed_train, y_embed_test
 
