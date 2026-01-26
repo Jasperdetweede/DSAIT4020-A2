@@ -29,15 +29,15 @@ def clean_and_preprocess_insomnia_data(dataset: pd.DataFrame, raw_data_folder: s
     X_train, X_test, y_train, y_test, y_embed_train, y_embed_test = split_insomnia_data(dataset, raw_data_folder, random_state, test_split)
 
     # Clean features 
-    X_train_clean, categorical, ordinal, numerical, columns_below_threshold = clean_data(X_train, miss_val_threshold)
-    X_test_clean, _, _, _, _ = clean_data(X_test, miss_val_threshold, columns_below_threshold)
+    X_train_clean, categorical, ordinal, numerical, binary, columns_below_threshold = clean_data(X_train, miss_val_threshold)
+    X_test_clean, _, _, _, _, _ = clean_data(X_test, miss_val_threshold, columns_below_threshold)
 
     # check if the sets match
-    assert set(categorical + ordinal + numerical) == set(X_train_clean.columns)
-    assert set(categorical + ordinal + numerical) == set(X_test_clean.columns)
+    assert set(categorical + ordinal + numerical + binary) == set(X_train_clean.columns)
+    assert set(categorical + ordinal + numerical + binary) == set(X_test_clean.columns)
 
     # Preprocess the features
-    X_train_preprocessed, X_test_preprocessed = preprocess_insomnia_data(X_train_clean, X_test_clean, categorical, numerical, ordinal)
+    X_train_preprocessed, X_test_preprocessed = preprocess_insomnia_data(X_train_clean, X_test_clean, categorical, numerical, ordinal, binary)
     
     target_cols = ["SLQ300", "SLQ310", "SLD012", "SLQ320", "SLQ330", "SLD013"]
 
@@ -584,6 +584,24 @@ unit_of_measure = [
     "PAD810U",
 ]
 
+
+def identify_binary_columns(df, exclude_cols=None):
+    """Identify binary columns (values 0 and 1, or 1 and 2 only)."""
+    if exclude_cols is None:
+        exclude_cols = set()
+    else:
+        exclude_cols = set(exclude_cols)
+    
+    binary_cols = []
+    for col in df.select_dtypes(include=[np.number]).columns:
+        if col in exclude_cols:
+            continue
+        unique_vals = set(df[col].dropna().unique())
+        if unique_vals and (unique_vals.issubset({1, 2, 1.0, 2.0}) or unique_vals.issubset({0, 1, 0.0, 1.0})):
+            binary_cols.append(col)
+    return binary_cols
+
+
 # cleaning X data
 def clean_data(data, threshold, columns_below_threshold=None):
 
@@ -789,41 +807,41 @@ def clean_data(data, threshold, columns_below_threshold=None):
     # higher numer = higher risk
     ordinal_cols_to_reverse = [
         # Alcohol
-    "ALQ121",
-    "ALQ142",
-    "ALQ270",
-    "ALQ280",
+        "ALQ121",
+        "ALQ142",
+        "ALQ270",
+        "ALQ280",
 
-    # Food security
-    "FSD032A",
-    "FSD032B",
-    "FSD032C",
-    "FSD052",
-    "FSD102",
+        # Food security
+        "FSD032A",
+        "FSD032B",
+        "FSD032C",
+        "FSD052",
+        "FSD102",
 
-    # functioning
-    "FNQ140",
-    "FNQ150",
-    "FNQ510",
-    "FNQ530",
+        # functioning
+        "FNQ140",
+        "FNQ150",
+        "FNQ510",
+        "FNQ530",
 
-    # Income
-    "INDFMMPC",
-    "IND310",
+        # Income
+        "INDFMMPC",
+        "IND310",
 
-    # oral health
-    "OHQ620",
-    "OHQ630",
-    "OHQ640",
-    "OHQ660",
-    "OHQ670",
-    "OHQ680",
+        # oral health
+        "OHQ620",
+        "OHQ630",
+        "OHQ640",
+        "OHQ660",
+        "OHQ670",
+        "OHQ680",
 
-    # Smoking - cigarette use
-    "SMQ040",
+        # Smoking - cigarette use
+        "SMQ040",
 
-    # Smoking - recent tobacco use
-    "SMQ725"
+        # Smoking - recent tobacco use
+        "SMQ725"
     ]
     for col in ordinal_cols_to_reverse:
         if col not in data.columns:
@@ -838,12 +856,20 @@ def clean_data(data, threshold, columns_below_threshold=None):
         }
         data[col] = data[col].map(new_mapping)
 
+    known_non_binary = set(ORDINAL_COLS + NUM_COLS)
+    binary_cols = identify_binary_columns(data, exclude_cols=known_non_binary)
+
+    # convert binary columns from {1, 2} to {0, 1}
+    for col in binary_cols:
+        unique_vals = set(data[col].dropna().unique())
+        if unique_vals.issubset({1, 2, 1.0, 2.0}):
+            data[col] = data[col].replace({1: 1, 2: 0, 1.0: 1.0, 2.0: 0.0})
+
     # make the final lists
 
-    categorical_cols = [col for col in CAT_COLS if col in data.columns]
+    categorical_cols = [col for col in CAT_COLS if col in data.columns and col not in binary_cols]
     ordinal_cols = [col for col in ORDINAL_COLS if col in data.columns]
     numerical_cols = [col for col in NUM_COLS if col in data.columns]
-
 
     ordinal_cols += [col for col in edited_ordinal if col in data.columns]
     numerical_cols += [col for col in edited_numerical if col in data.columns]
@@ -851,7 +877,7 @@ def clean_data(data, threshold, columns_below_threshold=None):
 
     # if there is a leftover, assign it to categorical columns
 
-    known_cols = set(categorical_cols) | set(ordinal_cols) | set(numerical_cols)
+    known_cols = set(categorical_cols) | set(ordinal_cols) | set(numerical_cols) | set(binary_cols)
 
     categorical_cols += [col for col in data.columns if col not in known_cols]
 
@@ -863,7 +889,7 @@ def clean_data(data, threshold, columns_below_threshold=None):
     # check if the length matches correctly
     #print(set(categorical_cols) | set(ordinal_cols) | set(numerical_cols) == set(data.columns))
 
-    return data, categorical_cols, ordinal_cols, numerical_cols, columns_below_threshold
+    return data, categorical_cols, ordinal_cols, numerical_cols, binary_cols, columns_below_threshold
 
 def hours_to_minutes(data, column):
     col = data[column]
@@ -889,7 +915,7 @@ def minutes_after_midnight(minutes):
 
 def preprocess_insomnia_data(
         X_train, X_test,
-        categorical_columns, numerical_columns, ordinal_columns,
+        categorical_columns, numerical_columns, ordinal_columns, binary_columns
     ):
 
     one_hot_encoder = OneHotEncoder(handle_unknown="ignore", sparse_output=True)
@@ -902,13 +928,17 @@ def preprocess_insomnia_data(
         ]), numerical_columns),
 
         ('ord', Pipeline([
-            ('imputer', SimpleImputer(strategy='most_frequent'))
+            ('imputer', SimpleImputer(strategy='median'))
         ]), ordinal_columns),
 
         ('cat', Pipeline([
             ('imputer', SimpleImputer(strategy='most_frequent')),
             ('onehot', one_hot_encoder)
         ]), categorical_columns),
+
+        ('bin', Pipeline([
+            ('imputer', SimpleImputer(strategy='most_frequent')),
+        ]), binary_columns),
     ],
     remainder="drop",
     )
