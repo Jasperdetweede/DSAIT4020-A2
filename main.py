@@ -146,7 +146,7 @@ def run_crossvalidation( dataset_name ):
 			prop_results_per_fold[model_name].append(metrics)
 
 	# Finalize by calculating measures and printing to json log
-	# print_baseline_results_to_json(baseline_MSE_per_fold)
+	print_baseline_results_to_json(baseline_MSE_per_fold)
 	print_proposed_models_results_to_json(prop_results_per_fold)
 
 #################
