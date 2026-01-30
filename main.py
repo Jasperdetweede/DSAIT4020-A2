@@ -41,8 +41,6 @@ def run_crossvalidation():
     np.random.seed(STATE)
 
     baseline_MSE_per_fold = []
-    proposed_models_MSE_per_fold = []
-
     prop_results_per_fold = {
         "joint": [],
         "split": [],
@@ -108,8 +106,8 @@ def run_crossvalidation():
         # Baselines
         #################
 
-        # baselines_avg_MSE = train_and_test_baselines(X_train, X_test, y_train, y_test, y_embed_train, y_embed_test, STATE, VERBOSE, fold, DATA)
-        # baseline_MSE_per_fold.append(baselines_avg_MSE)
+        baselines_avg_MSE = train_and_test_baselines(X_train, X_test, y_train, y_test, y_embed_train, y_embed_test, STATE, VERBOSE, fold, DATA)
+        baseline_MSE_per_fold.append(baselines_avg_MSE)
 
         #################
         # Proposed models
@@ -253,6 +251,8 @@ def train_and_test_baselines(X_train, X_test, y_train, y_test, y_embed_train, y_
 #################  
 
 def print_baseline_results_to_json(baseline_MSE_per_fold):
+    baseline_MSE_per_fold = np.array(baseline_MSE_per_fold)
+
     mean_MSE = baseline_MSE_per_fold.mean(axis=0)
     var_MSE  = baseline_MSE_per_fold.var(axis=0)
 
@@ -282,19 +282,31 @@ def print_baseline_results_to_json(baseline_MSE_per_fold):
 
 def print_proposed_models_results_to_json(prop_results_per_fold):
 
-    with open('proposed_models_results.json', "a") as f:
-        for model_name, arr in prop_results_per_fold.items():
-            result = {
-                "model_name": model_name,
-                "train_mean": arr[:, 0].mean(),
-                "train_var":  arr[:, 0].var(),
-                "test_mean":  arr[:, 1].mean(),
-                "test_var":   arr[:, 1].var(),
-                "aug_test_mean": arr[:, 2].mean(),
-                "aug_test_var":  arr[:, 2].var(),
-            }
+    results_list = []
 
-            f.write(json.dumps(result) + "\n")
+    for model_name, lst in prop_results_per_fold.items():
+        arr = np.array(lst)  
+
+        # Skip if empty
+        if arr.size == 0:
+            print(f"No results for model {model_name}, skippin it")
+            continue
+
+        result = {
+            "model_name": model_name,
+            "train_mean": float(arr[:, 0].mean()),
+            "train_var":  float(arr[:, 0].var()),
+            "test_mean":  float(arr[:, 1].mean()),
+            "test_var":   float(arr[:, 1].var()),
+            "aug_test_mean": float(arr[:, 2].mean()),
+            "aug_test_var":  float(arr[:, 2].var()),
+        }
+
+        results_list.append(result)
+
+    # Save all results to JSON at once
+    with open("proposed_models_results.json", "w") as f:
+        json.dump(results_list, f, indent=4)
         
 if __name__ == "__main__":
     run_crossvalidation()
