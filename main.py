@@ -153,7 +153,7 @@ def train_and_test_baselines(X_train, X_test, y_train, y_test, y_embed_train, y_
     json_metrics_rf["dataset"] = DATA
     json_metrics_logistic["dataset"] = DATA
     
-    with open('log.json', 'w') as f: 
+    with open('log.json', 'a') as f: 
         json.dump(json_metrics_nb, f, indent=4)
         json.dump(json_metrics_rf, f, indent=4)
         json.dump(json_metrics_logistic, f, indent=4)
