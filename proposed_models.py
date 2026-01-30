@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 from shallow_models import JointModel, SplitModel
 from deep_models import DeepJointModel, DeepSplitModel
+from mlp_baselines import BaseMLP
 from torch.utils.data import Dataset, DataLoader
 from sklearn.metrics import confusion_matrix, f1_score, classification_report, mean_squared_error
 
@@ -52,6 +53,11 @@ class CustomDatasetNoE(Dataset):
 ######################
 # MAIN TRAIN FUNCTIONS
 ######################
+def train_baseline_mlp( X_train, X_test, y_train, y_test, e_train, e_test, e_kept_ratio, epochs=1000, augment_epochs=50, early_stop_epochs=20, device="cpu" ):
+	datasets, layer_sizes  = get_datasets_and_layer_sizes( X_train, X_test, y_train, y_test, e_train, e_test, e_kept_ratio )
+	model = BaseMLP( n_features=layer_sizes["n_in"], hidden_size=layer_sizes["n_reg"], device=device )
+	result = train_baseline_model( datasets, model, title="Base MLP", epochs=epochs, augment_epochs=augment_epochs, early_stop_epochs=early_stop_epochs, device=device )
+	return result
 
 def train_joint_model( X_train, X_test, y_train, y_test, e_train, e_test, e_kept_ratio, l=1.0, epochs=1000, augment_epochs=50, early_stop_epochs=20, device="cpu" ):
 	datasets, layer_sizes  = get_datasets_and_layer_sizes( X_train, X_test, y_train, y_test, e_train, e_test, e_kept_ratio )
@@ -98,6 +104,20 @@ def get_datasets_and_layer_sizes( X_train, X_test, y_train, y_test, e_train, e_t
 	}
 
 	return datasets, layer_sizes
+
+def train_baseline_model( datasets, model, title, batch_size=32, epochs=1000, augment_epochs=50, early_stop_epochs=20, device="cpu" ):
+	dataloader_train_w_e = DataLoader( datasets["train_w_e"], batch_size=batch_size, shuffle=False )
+	dataloader_train_no_e = DataLoader( datasets["train_no_e"], batch_size=batch_size, shuffle=False )
+	dataloader_test = DataLoader( datasets["test"], batch_size=batch_size, shuffle=False )
+
+	e_pred_train, y_pred_train = model.fit_predict( dataloader_train_w_e, epochs=epochs, early_stop_epochs=early_stop_epochs )
+	train_mse = mean_squared_error(datasets["train_w_e"].embedding, e_pred_train)
+	#present_model_metrics( datasets["train_w_e"].y, y_pred_train, , e_pred_train, title=f"{title} MLP [Training]" )
+	e_pred_test, y_pred_test = model.predict( dataloader_test )
+	test_mse = mean_squared_error(datasets["test"].embedding, e_pred_test)
+	#present_model_metrics( datasets["test"].y, y_pred_test, , e_pred_test, title=f"{title} MLP [Testing]" )
+
+	return train_mse, test_mse, aug_test_mse
 
 def train_proposal_model( datasets, model, title, batch_size=32, epochs=1000, augment_epochs=50, early_stop_epochs=20, device="cpu" ):
 	dataloader_train_w_e = DataLoader( datasets["train_w_e"], batch_size=batch_size, shuffle=False )
