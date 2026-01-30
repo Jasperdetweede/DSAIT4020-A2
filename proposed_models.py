@@ -105,15 +105,15 @@ def train_proposal_model( datasets, model, title, batch_size=32, epochs=1000, au
 	dataloader_test = DataLoader( datasets["test"], batch_size=batch_size, shuffle=False )
 
 	e_pred_train, y_pred_train = model.fit_predict( dataloader_train_w_e, epochs=epochs, early_stop_epochs=early_stop_epochs )
-	train_mse = mean_squared_error(e_train, e_pred_train)
-	#present_model_metrics( datasets["train_w_e"].y, y_pred_train, datasets["train_w_e"].embedding, e_pred_train, title=f"{title} MLP [Training]" )
+	train_mse = mean_squared_error(datasets["train_w_e"].embedding, e_pred_train)
+	#present_model_metrics( datasets["train_w_e"].y, y_pred_train, , e_pred_train, title=f"{title} MLP [Training]" )
 	e_pred_test, y_pred_test = model.predict( dataloader_test )
-	test_mse = mean_squared_error(e_test, e_pred_test)
-	#present_model_metrics( datasets["test"].y, y_pred_test, datasets["test"].embedding, e_pred_test, title=f"{title} MLP [Testing]" )
+	test_mse = mean_squared_error(datasets["test"].embedding, e_pred_test)
+	#present_model_metrics( datasets["test"].y, y_pred_test, , e_pred_test, title=f"{title} MLP [Testing]" )
 
 	model.fit( dataloader_train_no_e, epochs=augment_epochs, early_stop_epochs=early_stop_epochs )
 	e_pred_test, y_pred_test = model.predict( dataloader_test )
-	aug_test_mse = mean_squared_error(e_test, e_pred_test)
+	aug_test_mse = mean_squared_error(datasets["test"].embedding, e_pred_test)
 	#present_model_metrics( datasets["test"].y, y_pred_test, datasets["test"].embedding, e_pred_test, title=f"{title} MLP (Augmented) [Testing]" )
 	return train_mse, test_mse, aug_test_mse
 
