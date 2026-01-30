@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import StratifiedKFold, train_test_split
 from sklearn.preprocessing import KBinsDiscretizer, OneHotEncoder, StandardScaler, FunctionTransformer
 from sklearn.pipeline import Pipeline
 from sklearn.compose import ColumnTransformer
@@ -16,7 +16,7 @@ import random
 # Full pipeline
 ###################################
 
-def clean_and_preprocess_insomnia_data(dataset: pd.DataFrame, raw_data_folder: str, test_split: float, random_state: int, miss_val_threshold: float):
+def clean_and_preprocess_insomnia_data(dataset: pd.DataFrame, raw_data_folder: str, test_split: float, random_state: int, miss_val_threshold: float, do_crossval: bool, cv_folds: int = 0, cv_cur_fold: int = 0):
     '''
     Takes a dataframe and splits it into the training set, the corresponding target embeddings and calculates a binary label. 
 
@@ -26,7 +26,7 @@ def clean_and_preprocess_insomnia_data(dataset: pd.DataFrame, raw_data_folder: s
     '''
     
     # Load train/test split
-    X_train, X_test, y_train, y_test, y_embed_train, y_embed_test = split_insomnia_data(dataset, raw_data_folder, random_state, test_split)
+    X_train, X_test, y_train, y_test, y_embed_train, y_embed_test = split_insomnia_data(dataset, raw_data_folder, random_state, test_split, do_crossval, cv_folds, cv_cur_fold)
 
     # Clean features 
     X_train_clean, categorical, ordinal, numerical, binary, columns_below_threshold = clean_data(X_train, miss_val_threshold)
@@ -60,7 +60,7 @@ def clean_and_preprocess_insomnia_data(dataset: pd.DataFrame, raw_data_folder: s
 # Data Splitting
 ###################################
 
-def split_insomnia_data(dataset, raw_data_folder, random_state, test_split):
+def split_insomnia_data(dataset, raw_data_folder, random_state, test_split, do_crossval, cv_folds, cv_cur_fold):
     '''
     Splits the insomnia dataset and adds the binary labelling. 
     
@@ -82,17 +82,47 @@ def split_insomnia_data(dataset, raw_data_folder, random_state, test_split):
     assert X.columns.__contains__("SEQN") == False, "Feature set should not contain SEQN column"
     assert y_targets.columns.__contains__("SEQN") == False, "Target embedding set should not contain SEQN column"
 
-    # Split into train and test sets 
-    X_train, X_test, y_train, y_test = train_test_split(
-        X,
-        y,
-        test_size=test_split,        
-        random_state=random_state,   
-        stratify=y       # preserve class balance
-    )
+    if do_crossval:
 
-    y_embed_train = y_targets.loc[X_train.index].astype(float)
-    y_embed_test  = y_targets.loc[X_test.index].astype(float)
+        assert 0 <= cv_cur_fold < cv_folds, f"cv_cur_fold must be in [0, {cv_folds - 1}]"
+
+        # Defensive copy to avoid fold-to-fold contamination
+        X = X.copy()
+        y_binary = y.copy()
+        y_targets = y_targets.copy()
+
+        skf = StratifiedKFold(
+            n_splits=cv_folds,
+            shuffle=True,
+            random_state=random_state
+        )
+
+        # Get train/test indices for the requested fold
+        splits = list(skf.split(X, y_binary))
+
+        train_idx, test_idx = splits[cv_cur_fold]
+
+        X_train = X.iloc[train_idx]
+        X_test  = X.iloc[test_idx]
+
+        y_train = y_binary.iloc[train_idx]
+        y_test  = y_binary.iloc[test_idx]
+
+        y_embed_train = y_targets.iloc[train_idx]
+        y_embed_test  = y_targets.iloc[test_idx]
+
+    else:
+        # Split into train and test sets 
+        X_train, X_test, y_train, y_test = train_test_split(
+            X,
+            y,
+            test_size=test_split,        
+            random_state=random_state,   
+            stratify=y       # preserve class balance
+        )
+
+        y_embed_train = y_targets.loc[X_train.index]
+        y_embed_test  = y_targets.loc[X_test.index]
 
     return X_train, X_test, y_train, y_test, y_embed_train, y_embed_test
 

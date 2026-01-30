@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 from scipy import sparse as sci
 
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import StratifiedKFold, train_test_split
 
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
@@ -13,7 +13,7 @@ from sklearn.preprocessing import StandardScaler, OneHotEncoder
 # Full pipeline
 ###################################
 
-def clean_and_preprocess_depression_data(dataset: pd.DataFrame, raw_data_folder: str, test_split: float, random_state: int, miss_val_threshold: float):
+def clean_and_preprocess_depression_data(dataset: pd.DataFrame, raw_data_folder: str, test_split: float, random_state: int, miss_val_threshold: float, do_crossval: bool, cv_folds: int = 0, cv_cur_fold: int = 0):
     '''
     Takes a dataframe and splits it into the training set, the corresponding target embeddings and calculates a binary label. 
 
@@ -23,7 +23,7 @@ def clean_and_preprocess_depression_data(dataset: pd.DataFrame, raw_data_folder:
     '''
     
     # Load train/test split
-    X_train, X_test, y_train, y_test, y_embed_train, y_embed_test = split_depression_data(dataset, raw_data_folder, random_state, test_split)
+    X_train, X_test, y_train, y_test, y_embed_train, y_embed_test = split_depression_data(dataset, raw_data_folder, random_state, test_split, do_crossval, cv_folds, cv_cur_fold)
 
     # Clean features 
     X_train_cleaned, X_test_cleaned = clean_depression_data(X_train, X_test, miss_val_threshold)
@@ -58,7 +58,7 @@ def clean_and_preprocess_depression_data(dataset: pd.DataFrame, raw_data_folder:
 # Data Splitting
 ###################################
 
-def split_depression_data(dataset, raw_data_folder, random_state, test_split):
+def split_depression_data(dataset, raw_data_folder, random_state, test_split, do_crossval, cd_folds, cd_cur_fold):
     '''
     Splits the depression dataset and adds the binary labelling. 
     
@@ -92,19 +92,51 @@ def split_depression_data(dataset, raw_data_folder, random_state, test_split):
     assert X.columns.__contains__("SEQN") == False, "Feature set should not contain SEQN column"
     assert y_embed.columns.__contains__("SEQN") == False, "Target embedding set should not contain SEQN column"
 
-    # Split into train and test sets 
-    X_train, X_test, y_train, y_test = train_test_split(
-        X,
-        y_binary,
-        test_size=test_split,        
-        random_state=random_state,   
-        stratify=y_binary       # preserve class balance
-    )
+    if do_crossval:
 
-    y_embed_train = y_embed.loc[X_train.index]
-    y_embed_test  = y_embed.loc[X_test.index]
+        assert 0 <= cd_cur_fold < cd_folds, f"cv_cur_fold must be in [0, {cd_folds - 1}]"
 
-    return X_train, X_test, y_train, y_test, y_embed_train, y_embed_test
+        # Defensive copy to avoid fold-to-fold contamination
+        X = X.copy()
+        y_binary = y_binary.copy()
+        y_embed = y_embed.copy()
+
+        skf = StratifiedKFold(
+            n_splits=cd_folds,
+            shuffle=True,
+            random_state=random_state
+        )
+
+        # Get train/test indices for the requested fold
+        splits = list(skf.split(X, y_binary))
+
+        train_idx, test_idx = splits[cd_cur_fold]
+
+        X_train = X.iloc[train_idx]
+        X_test  = X.iloc[test_idx]
+
+        y_train = y_binary.iloc[train_idx]
+        y_test  = y_binary.iloc[test_idx]
+
+        y_embed_train = y_embed.iloc[train_idx]
+        y_embed_test  = y_embed.iloc[test_idx]
+
+        return X_train, X_test, y_train, y_test, y_embed_train, y_embed_test
+
+    else:
+        # Split into train and test sets 
+        X_train, X_test, y_train, y_test = train_test_split(
+            X,
+            y_binary,
+            test_size=test_split,        
+            random_state=random_state,   
+            stratify=y_binary       # preserve class balance
+        )
+
+        y_embed_train = y_embed.loc[X_train.index]
+        y_embed_test  = y_embed.loc[X_test.index]
+
+        return X_train, X_test, y_train, y_test, y_embed_train, y_embed_test
 
 
 ###################################
@@ -232,11 +264,7 @@ def get_known_categorical_columns():
 
     return ordinal_cols, nominal_cols
 
-def convert_time_columns(df):
-    """Convert time strings (HH:MM) to decimal hours."""
-    time_cols = ['SLQ300', 'SLQ310', 'SLQ320', 'SLQ330']
-    
-    def time_to_hours(time_str):
+def time_to_hours(time_str):
         if pd.isna(time_str):
             return np.nan
         try:
@@ -246,6 +274,10 @@ def convert_time_columns(df):
             return int(h) + int(m) / 60
         except:
             return np.nan
+
+def convert_time_columns(df):
+    """Convert time strings (HH:MM) to decimal hours."""
+    time_cols = ['SLQ300', 'SLQ310', 'SLQ320', 'SLQ330']
     
     for col in time_cols:
         if col in df.columns:
