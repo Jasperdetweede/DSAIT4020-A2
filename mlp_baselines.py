@@ -79,7 +79,6 @@ class BaseMLP(nn.Module):
 	def predict( self, dataloader ):
 		self.eval()
 		e_preds = []
-		y_preds = []
 
 		with torch.no_grad():
 			for batch in dataloader:

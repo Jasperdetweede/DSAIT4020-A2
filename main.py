@@ -1,3 +1,4 @@
+import os
 import json
 import numpy as np
 import pandas as pd
@@ -29,6 +30,9 @@ def run_crossvalidation( dataset_name ):
     # Paths
     RAW_DATA_FOLDER = 'raw_data'
     TARGET_FILE_PATH = 'unprocessed_data'
+    
+    if not os.exists(TARGET_FILE_PATH):
+        load_raw_data(RAW_DATA_FOLDER, TARGET_FILE_PATH)
 
     # Flow Controls
     DATA = dataset_name
