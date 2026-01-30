@@ -13,6 +13,8 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.linear_model import LogisticRegression
 from sklearn.naive_bayes import GaussianNB
 
+from proposed_models import train_joint_model, train_split_model, train_deep_joint_model, train_deep_split_model
+
 def run_everything():
 	#run_crossvalidation( 'depression' )
 	run_crossvalidation( 'insomnia' )
@@ -135,7 +137,6 @@ def run_crossvalidation( dataset_name ):
         # Sanity Checks
         assert X_train.shape[0] >= 100 and y_train.shape[0] >= 100 and y_embed_train.shape[0] >= 100, "Arrays must have at least 100 samples for the check."
         assert (len(X_train[:100]) == len(y_train[:100])) and (len(X_train[:100]) == len(y_embed_train[:100])), "First 100 samples of X_train, y_train, and y_embed_train are not aligned."
-    
         # Run and safe
         proposed_model_fold_results = train_and_test_propositions(X_train, X_test, y_train, y_test, y_embed_train, y_embed_test, STATE, E_KEEP_RATE, EPOCHS, AUGMENT_EPOCHS, EARLY_STOP_EPOCHS, DEVICE, l)
 
