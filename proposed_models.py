@@ -117,7 +117,7 @@ def train_baseline_model( datasets, model, title, batch_size=32, epochs=1000, au
 	test_mse = mean_squared_error(datasets["test"].embedding, e_pred_test)
 	#present_model_metrics( datasets["test"].y, y_pred_test, , e_pred_test, title=f"{title} MLP [Testing]" )
 
-	return train_mse, test_mse, aug_test_mse
+	return train_mse, test_mse
 
 def train_proposal_model( datasets, model, title, batch_size=32, epochs=1000, augment_epochs=50, early_stop_epochs=20, device="cpu" ):
 	dataloader_train_w_e = DataLoader( datasets["train_w_e"], batch_size=batch_size, shuffle=False )
