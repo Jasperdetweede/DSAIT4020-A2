@@ -2,11 +2,11 @@ import json
 import numpy as np
 import pandas as pd
 
-#from preprocessing_depression import clean_and_preprocess_depression_data
+from preprocessing_depression import clean_and_preprocess_depression_data
 from preprocessing_insomnia import clean_and_preprocess_insomnia_data
 from preprocessing_electrical_circuit import gen_and_preprocess_ec_data
 
-#from data_balancing import resample_training_data
+from data_balancing import resample_training_data
 
 from baseline_models import train_multitarget_baseline
 from sklearn.ensemble import RandomForestRegressor
@@ -16,8 +16,8 @@ from sklearn.naive_bayes import GaussianNB
 from proposed_models import train_joint_model, train_split_model, train_deep_joint_model, train_deep_split_model
 
 def run_everything():
-    #run_crossvalidation( 'depression' )
-    run_crossvalidation( 'insomnia' )
+    run_crossvalidation( 'depression' )
+    #run_crossvalidation( 'insomnia' )
     #run_crossvalidation( 'electrical_circuit' )
 
 def run_crossvalidation( dataset_name ):
@@ -62,11 +62,11 @@ def run_crossvalidation( dataset_name ):
         # Data loading
         dataset = pd.read_csv(TARGET_FILE_PATH + '/' + DATA + '_data.csv')
 
-        #if DATA == 'depression':
-            #X_train, X_test, y_train, y_test, y_embed_train, y_embed_test = clean_and_preprocess_depression_data(dataset, RAW_DATA_FOLDER, TEST_SET_FRACTION, STATE, MISSING_VALUES_THRESHOLD, True, FOLDS, fold)
-            #DO_SMOTE = True
-        #elif DATA == 'insomnia':
-        if DATA == 'insomnia':
+        if DATA == 'depression':
+            X_train, X_test, y_train, y_test, y_embed_train, y_embed_test = clean_and_preprocess_depression_data(dataset, RAW_DATA_FOLDER, TEST_SET_FRACTION, STATE, MISSING_VALUES_THRESHOLD, True, FOLDS, fold)
+            DO_SMOTE = True
+        elif DATA == 'insomnia':
+        #if DATA == 'insomnia':
             X_train, X_test, y_train, y_test, y_embed_train, y_embed_test = clean_and_preprocess_insomnia_data(dataset, RAW_DATA_FOLDER, TEST_SET_FRACTION, STATE, MISSING_VALUES_THRESHOLD, True, FOLDS, fold)
             y_embed_train = y_embed_train.astype(np.float64)
             y_embed_test = y_embed_test.astype(np.float64)
@@ -78,8 +78,8 @@ def run_crossvalidation( dataset_name ):
             raise ValueError("Invalid dataset selected")
 
         # Balancing for depression
-        #if DO_SMOTE:
-        #	X_train, y_train, y_embed_train = resample_training_data(X_train, y_train, y_embed_train, random_state=STATE)
+        if DO_SMOTE:
+            X_train, y_train, y_embed_train = resample_training_data(X_train, y_train, y_embed_train, random_state=STATE)
 
         # Introduce noise
         if FLIP_LABEL_FRACTION > 0.0:
@@ -144,7 +144,7 @@ def run_crossvalidation( dataset_name ):
 
 #################
 # Proposed models
-#################	
+#################    
 
 def train_and_test_propositions(X_train, X_test, y_train, y_test, y_embed_train, y_embed_test, STATE, E_KEEP_RATE, EPOCHS, AUGMENT_EPOCHS, EARLY_STOP_EPOCHS, DEVICE, l):
     results = {}
@@ -188,10 +188,9 @@ def train_and_test_propositions(X_train, X_test, y_train, y_test, y_embed_train,
 
 #################
 # Baselines
-#################	
+#################    
 
 def train_and_test_baselines(X_train, X_test, y_train, y_test, y_embed_train, y_embed_test, STATE, VERBOSE, fold, DATA):
-    print(X_train.shape, type( y_embed_train ))
     nb_model = GaussianNB()
     y_pred_nb, json_metrics_nb = train_multitarget_baseline(
                                 model=nb_model,
