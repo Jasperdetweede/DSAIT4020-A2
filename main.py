@@ -16,9 +16,9 @@ from sklearn.naive_bayes import GaussianNB
 from proposed_models import train_joint_model, train_split_model, train_deep_joint_model, train_deep_split_model
 
 def run_everything():
-    run_crossvalidation( 'depression' )
+    #run_crossvalidation( 'depression' )
     #run_crossvalidation( 'insomnia' )
-    #run_crossvalidation( 'electrical_circuit' )
+    run_crossvalidation( 'electrical_circuit' )
 
 def run_crossvalidation( dataset_name ):
 
@@ -60,13 +60,12 @@ def run_crossvalidation( dataset_name ):
 
     for fold in range(FOLDS):
         # Data loading
-        dataset = pd.read_csv(TARGET_FILE_PATH + '/' + DATA + '_data.csv')
-
         if DATA == 'depression':
+            dataset = pd.read_csv(TARGET_FILE_PATH + '/' + DATA + '_data.csv')
             X_train, X_test, y_train, y_test, y_embed_train, y_embed_test = clean_and_preprocess_depression_data(dataset, RAW_DATA_FOLDER, TEST_SET_FRACTION, STATE, MISSING_VALUES_THRESHOLD, True, FOLDS, fold)
             DO_SMOTE = True
         elif DATA == 'insomnia':
-        #if DATA == 'insomnia':
+            dataset = pd.read_csv(TARGET_FILE_PATH + '/' + DATA + '_data.csv')
             X_train, X_test, y_train, y_test, y_embed_train, y_embed_test = clean_and_preprocess_insomnia_data(dataset, RAW_DATA_FOLDER, TEST_SET_FRACTION, STATE, MISSING_VALUES_THRESHOLD, True, FOLDS, fold)
             y_embed_train = y_embed_train.astype(np.float64)
             y_embed_test = y_embed_test.astype(np.float64)
