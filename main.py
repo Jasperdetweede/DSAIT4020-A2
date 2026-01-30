@@ -43,18 +43,18 @@ def run_crossvalidation( dataset_name ):
 
 	FOLDS = 7
 
-    baseline_MSE_per_fold = []
-    proposed_models_MSE_per_fold = []
+	baseline_MSE_per_fold = []
+	proposed_models_MSE_per_fold = []
 
-    prop_results_per_fold = {
-        "joint": [],
-        "split": [],
-        "deep_joint": [],
-        "deep_split": []
-    }
+	prop_results_per_fold = {
+		"joint": [],
+		"split": [],
+		"deep_joint": [],
+		"deep_split": []
+	}
 
-    # Assertions before starting
-    assert FLIP_LABEL_FRACTION > 0.0 and FLIP_LABEL_FRACTION < 1.0, "FLIP_LABEL_FRACTION should be beween 0.0 and 1.0"
+	# Assertions before starting
+	assert FLIP_LABEL_FRACTION > 0.0 and FLIP_LABEL_FRACTION < 1.0, "FLIP_LABEL_FRACTION should be beween 0.0 and 1.0"
 
 	# Assertions before starting
 	assert FLIP_LABEL_FRACTION > 0.0 and FLIP_LABEL_FRACTION < 1.0, "FLIP_LABEL_FRACTION should be beween 0.0 and 1.0"
@@ -113,82 +113,82 @@ def run_crossvalidation( dataset_name ):
 		assert(isinstance(y_embed_train, np.ndarray))
 		assert(isinstance(y_embed_test, np.ndarray))
 
-        # baselines_avg_MSE = train_and_test_baselines(X_train, X_test, y_train, y_test, y_embed_train, y_embed_test, STATE, VERBOSE, fold, DATA)
-        # baseline_MSE_per_fold.append(baselines_avg_MSE)
+		# baselines_avg_MSE = train_and_test_baselines(X_train, X_test, y_train, y_test, y_embed_train, y_embed_test, STATE, VERBOSE, fold, DATA)
+		# baseline_MSE_per_fold.append(baselines_avg_MSE)
 
-        #################
-        # Proposed models
-        #################
+		#################
+		# Proposed models
+		#################
 
-        DEVICE = "cpu"#torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        E_KEEP_RATE = 0.7
-        l = 1
-        if DATA == 'depression':
-            l = 1e-2
-        elif DATA == 'insomnia':
-            l = 1e-2
-        elif DATA == 'electrical_circuit':
-            l = 1
+		DEVICE = "cpu"#torch.device("cuda" if torch.cuda.is_available() else "cpu")
+		E_KEEP_RATE = 0.7
+		l = 1
+		if DATA == 'depression':
+			l = 1e-2
+		elif DATA == 'insomnia':
+			l = 1e-2
+		elif DATA == 'electrical_circuit':
+			l = 1
 
-        EPOCHS = 100
-        AUGMENT_EPOCHS = EPOCHS//2
-        EARLY_STOP_EPOCHS = EPOCHS//5
+		EPOCHS = 100
+		AUGMENT_EPOCHS = EPOCHS//2
+		EARLY_STOP_EPOCHS = EPOCHS//5
 
-        # Sanity Checks
-        assert X_train.shape[0] >= 100 and y_train.shape[0] >= 100 and y_embed_train.shape[0] >= 100, "Arrays must have at least 100 samples for the check."
-        assert (len(X_train[:100]) == len(y_train[:100])) and (len(X_train[:100]) == len(y_embed_train[:100])), "First 100 samples of X_train, y_train, and y_embed_train are not aligned."
-        # Run and safe
-        proposed_model_fold_results = train_and_test_propositions(X_train, X_test, y_train, y_test, y_embed_train, y_embed_test, STATE, E_KEEP_RATE, EPOCHS, AUGMENT_EPOCHS, EARLY_STOP_EPOCHS, DEVICE, l)
+		# Sanity Checks
+		assert X_train.shape[0] >= 100 and y_train.shape[0] >= 100 and y_embed_train.shape[0] >= 100, "Arrays must have at least 100 samples for the check."
+		assert (len(X_train[:100]) == len(y_train[:100])) and (len(X_train[:100]) == len(y_embed_train[:100])), "First 100 samples of X_train, y_train, and y_embed_train are not aligned."
+		# Run and safe
+		proposed_model_fold_results = train_and_test_propositions(X_train, X_test, y_train, y_test, y_embed_train, y_embed_test, STATE, E_KEEP_RATE, EPOCHS, AUGMENT_EPOCHS, EARLY_STOP_EPOCHS, DEVICE, l)
 
-        for model_name, metrics in proposed_model_fold_results.items():
-            prop_results_per_fold[model_name].append(metrics)
+		for model_name, metrics in proposed_model_fold_results.items():
+			prop_results_per_fold[model_name].append(metrics)
 
-    # Finalize by calculating measures and printing to json log
-    print_baseline_results_to_json(baseline_MSE_per_fold)
-    print_proposed_models_results_to_json(prop_results_per_fold)
+	# Finalize by calculating measures and printing to json log
+	print_baseline_results_to_json(baseline_MSE_per_fold)
+	print_proposed_models_results_to_json(prop_results_per_fold)
 
 #################
 # Proposed models
-#################    
+#################	
 
 def train_and_test_propositions(X_train, X_test, y_train, y_test, y_embed_train, y_embed_test, STATE, E_KEEP_RATE, EPOCHS, AUGMENT_EPOCHS, EARLY_STOP_EPOCHS, DEVICE, l):
-    results = {}
+	results = {}
 
-    results["joint"] = train_joint_model( X_train, X_test, y_train, y_test, y_embed_train, y_embed_test,
-                    e_kept_ratio=E_KEEP_RATE,
-                    l=l,
-                    epochs=EPOCHS,
-                    augment_epochs=AUGMENT_EPOCHS,
-                    early_stop_epochs=EARLY_STOP_EPOCHS,
-                    device=DEVICE
-                  )
-    
-    results["split"] = train_split_model( X_train, X_test, y_train, y_test, y_embed_train, y_embed_test,
-                    e_kept_ratio=E_KEEP_RATE,
-                    epochs=EPOCHS,
-                    augment_epochs=AUGMENT_EPOCHS,
-                    early_stop_epochs=EARLY_STOP_EPOCHS,
-                    device=DEVICE
-                  )
-    
-    results["deep_joint"] = train_deep_joint_model( X_train, X_test, y_train, y_test, y_embed_train, y_embed_test,
-                        e_kept_ratio=E_KEEP_RATE,
-                        l=l,
-                        epochs=EPOCHS,
-                        augment_epochs=AUGMENT_EPOCHS,
-                        early_stop_epochs=EARLY_STOP_EPOCHS,
-                        device=DEVICE
-                      )
-    
-    results["deep_split"] = train_deep_split_model( X_train, X_test, y_train, y_test, y_embed_train, y_embed_test,
-                        e_kept_ratio=E_KEEP_RATE,
-                        epochs=EPOCHS,
-                        augment_epochs=AUGMENT_EPOCHS,
-                        early_stop_epochs=EARLY_STOP_EPOCHS,
-                        device=DEVICE
-                      )
+	results["joint"] = train_joint_model( X_train, X_test, y_train, y_test, y_embed_train, y_embed_test,
+					e_kept_ratio=E_KEEP_RATE,
+					l=l,
+					epochs=EPOCHS,
+					augment_epochs=AUGMENT_EPOCHS,
+					early_stop_epochs=EARLY_STOP_EPOCHS,
+					device=DEVICE
+				  )
+	
+	results["split"] = train_split_model( X_train, X_test, y_train, y_test, y_embed_train, y_embed_test,
+					e_kept_ratio=E_KEEP_RATE,
+					epochs=EPOCHS,
+					augment_epochs=AUGMENT_EPOCHS,
+					early_stop_epochs=EARLY_STOP_EPOCHS,
+					device=DEVICE
+				  )
+	
+	results["deep_joint"] = train_deep_joint_model( X_train, X_test, y_train, y_test, y_embed_train, y_embed_test,
+						e_kept_ratio=E_KEEP_RATE,
+						l=l,
+						epochs=EPOCHS,
+						augment_epochs=AUGMENT_EPOCHS,
+						early_stop_epochs=EARLY_STOP_EPOCHS,
+						device=DEVICE
+					  )
+	
+	results["deep_split"] = train_deep_split_model( X_train, X_test, y_train, y_test, y_embed_train, y_embed_test,
+						e_kept_ratio=E_KEEP_RATE,
+						epochs=EPOCHS,
+						augment_epochs=AUGMENT_EPOCHS,
+						early_stop_epochs=EARLY_STOP_EPOCHS,
+						device=DEVICE
+					  )
 
-    return results
+	return results
 
 
 #################
@@ -245,61 +245,61 @@ def train_and_test_baselines(X_train, X_test, y_train, y_test, y_embed_train, y_
 		json.dump(json_metrics_rf, f, indent=4)
 		json.dump(json_metrics_logistic, f, indent=4)
 
-    return np.array([json_metrics_nb["avg_train_MSE"], 
-            json_metrics_nb["avg_test_MSE"],
-            json_metrics_rf["avg_train_MSE"], 
-            json_metrics_rf["avg_test_MSE"], 
-            json_metrics_logistic["avg_train_MSE"], 
-            json_metrics_logistic["avg_test_MSE"]
-    ])
+	return np.array([json_metrics_nb["avg_train_MSE"], 
+			json_metrics_nb["avg_test_MSE"],
+			json_metrics_rf["avg_train_MSE"], 
+			json_metrics_rf["avg_test_MSE"], 
+			json_metrics_logistic["avg_train_MSE"], 
+			json_metrics_logistic["avg_test_MSE"]
+	])
 
 #################
 # Baselines
 #################  
 
 def print_baseline_results_to_json(baseline_MSE_per_fold):
-    mean_MSE = baseline_MSE_per_fold.mean(axis=0)
-    var_MSE  = baseline_MSE_per_fold.var(axis=0)
+	mean_MSE = baseline_MSE_per_fold.mean(axis=0)
+	var_MSE  = baseline_MSE_per_fold.var(axis=0)
 
-    results = {
-        "NB": {
-            "train_mean": mean_MSE[0],
-            "train_var":  var_MSE[0],
-            "test_mean":  mean_MSE[1],
-            "test_var":   var_MSE[1],
-        },
-        "RF": {
-            "train_mean": mean_MSE[2],
-            "train_var":  var_MSE[2],
-            "test_mean":  mean_MSE[3],
-            "test_var":   var_MSE[3],
-        },
-        "LOG": {
-            "train_mean": mean_MSE[4],
-            "train_var":  var_MSE[4],
-            "test_mean":  mean_MSE[5],
-            "test_var":   var_MSE[5],
-        }
-    }
+	results = {
+		"NB": {
+			"train_mean": mean_MSE[0],
+			"train_var":  var_MSE[0],
+			"test_mean":  mean_MSE[1],
+			"test_var":   var_MSE[1],
+		},
+		"RF": {
+			"train_mean": mean_MSE[2],
+			"train_var":  var_MSE[2],
+			"test_mean":  mean_MSE[3],
+			"test_var":   var_MSE[3],
+		},
+		"LOG": {
+			"train_mean": mean_MSE[4],
+			"train_var":  var_MSE[4],
+			"test_mean":  mean_MSE[5],
+			"test_var":   var_MSE[5],
+		}
+	}
 
-    with open('baseline_results.json', 'a') as f: 
-        json.dump(results, f, indent=4)
+	with open('baseline_results.json', 'a') as f: 
+		json.dump(results, f, indent=4)
 
 def print_proposed_models_results_to_json(prop_results_per_fold):
 
-    with open('proposed_models_results.json', "a") as f:
-        for model_name, arr in prop_results_per_fold.items():
-            result = {
-                "model_name": model_name,
-                "train_mean": arr[:, 0].mean(),
-                "train_var":  arr[:, 0].var(),
-                "test_mean":  arr[:, 1].mean(),
-                "test_var":   arr[:, 1].var(),
-                "aug_test_mean": arr[:, 2].mean(),
-                "aug_test_var":  arr[:, 2].var(),
-            }
+	with open('proposed_models_results.json', "a") as f:
+		for model_name, arr in prop_results_per_fold.items():
+			result = {
+				"model_name": model_name,
+				"train_mean": arr[:, 0].mean(),
+				"train_var":  arr[:, 0].var(),
+				"test_mean":  arr[:, 1].mean(),
+				"test_var":   arr[:, 1].var(),
+				"aug_test_mean": arr[:, 2].mean(),
+				"aug_test_var":  arr[:, 2].var(),
+			}
 
-            f.write(json.dumps(result) + "\n")
-        
+			f.write(json.dumps(result) + "\n")
+		
 if __name__ == "__main__":
 	run_everything()
