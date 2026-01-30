@@ -958,7 +958,8 @@ def preprocess_insomnia_data(
         ]), numerical_columns),
 
         ('ord', Pipeline([
-            ('imputer', SimpleImputer(strategy='median'))
+            ('imputer', SimpleImputer(strategy='median')),
+            ('scaler', scaler)
         ]), ordinal_columns),
 
         ('cat', Pipeline([
