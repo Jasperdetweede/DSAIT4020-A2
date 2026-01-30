@@ -19,9 +19,9 @@ from sklearn.naive_bayes import GaussianNB
 from proposed_models import train_baseline_mlp, train_joint_model, train_split_model, train_deep_joint_model, train_deep_split_model
 
 def run_everything():
-	#run_crossvalidation( 'depression' )
+	run_crossvalidation( 'depression' )
 	run_crossvalidation( 'insomnia' )
-	# run_crossvalidation( 'electrical_circuit' )
+	run_crossvalidation( 'electrical_circuit' )
 
 def run_crossvalidation( dataset_name ):
 
@@ -115,8 +115,8 @@ def run_crossvalidation( dataset_name ):
 		assert(isinstance(y_embed_train, np.ndarray))
 		assert(isinstance(y_embed_test, np.ndarray))
 
-		# baselines_avg_MSE = train_and_test_baselines(X_train, X_test, y_train, y_test, y_embed_train, y_embed_test, STATE, VERBOSE, fold, DATA)
-		# baseline_MSE_per_fold.append(baselines_avg_MSE)
+		baselines_avg_MSE = train_and_test_baselines(X_train, X_test, y_train, y_test, y_embed_train, y_embed_test, STATE, VERBOSE, fold, DATA)
+		baseline_MSE_per_fold.append(baselines_avg_MSE)
 
 		#################
 		# Proposed models
