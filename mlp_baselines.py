@@ -22,7 +22,7 @@ class BaseMLP(nn.Module):
 		self.loss_reg = nn.MSELoss()
 		self.optim = torch.optim.Adam( self.regressor.parameters(), lr=1e-3 )
 		self.device = device
-        self.to(self.device)
+		self.to(self.device)
 	
 	def forward( self, X ):
 		e_pred = self.regressor( X )
