@@ -2,11 +2,11 @@ import json
 import numpy as np
 import pandas as pd
 
-from preprocessing_depression import clean_and_preprocess_depression_data
+#from preprocessing_depression import clean_and_preprocess_depression_data
 from preprocessing_insomnia import clean_and_preprocess_insomnia_data
 from preprocessing_electrical_circuit import gen_and_preprocess_ec_data
 
-from data_balancing import resample_training_data
+#from data_balancing import resample_training_data
 
 from baseline_models import train_multitarget_baseline
 from sklearn.ensemble import RandomForestRegressor
@@ -15,7 +15,12 @@ from sklearn.naive_bayes import GaussianNB
 
 from proposed_models import train_joint_model, train_split_model, train_deep_joint_model, train_deep_split_model
 
-def run_crossvalidation():
+def run_everything():
+    #run_crossvalidation( 'depression' )
+    run_crossvalidation( 'insomnia' )
+    #run_crossvalidation( 'electrical_circuit' )
+
+def run_crossvalidation( dataset_name ):
 
     #################
     # Data
@@ -26,20 +31,18 @@ def run_crossvalidation():
     TARGET_FILE_PATH = 'unprocessed_data'
 
     # Flow Controls
-    DATA = 'depression'  # Options: 'depression', 'insomnia', 'electrical_circuit'
+    DATA = dataset_name
 
     # System variables
     STATE = 42
     TEST_SET_FRACTION = 0.20
     MISSING_VALUES_THRESHOLD = 0.50
     SAMPLES_ELECTRICAL_CIRCUIT = 5000
-    VERBOSE = True
+    VERBOSE = False
     FLIP_LABEL_FRACTION = 0.03
 
     FOLDS = 7
-
-    np.random.seed(STATE)
-
+    
     baseline_MSE_per_fold = []
     prop_results_per_fold = {
         "joint": [],
@@ -59,11 +62,14 @@ def run_crossvalidation():
         # Data loading
         dataset = pd.read_csv(TARGET_FILE_PATH + '/' + DATA + '_data.csv')
 
-        if DATA == 'depression':
-            X_train, X_test, y_train, y_test, y_embed_train, y_embed_test = clean_and_preprocess_depression_data(dataset, RAW_DATA_FOLDER, TEST_SET_FRACTION, STATE, MISSING_VALUES_THRESHOLD, True, FOLDS, fold)
-            DO_SMOTE = True
-        elif DATA == 'insomnia':
+        #if DATA == 'depression':
+            #X_train, X_test, y_train, y_test, y_embed_train, y_embed_test = clean_and_preprocess_depression_data(dataset, RAW_DATA_FOLDER, TEST_SET_FRACTION, STATE, MISSING_VALUES_THRESHOLD, True, FOLDS, fold)
+            #DO_SMOTE = True
+        #elif DATA == 'insomnia':
+        if DATA == 'insomnia':
             X_train, X_test, y_train, y_test, y_embed_train, y_embed_test = clean_and_preprocess_insomnia_data(dataset, RAW_DATA_FOLDER, TEST_SET_FRACTION, STATE, MISSING_VALUES_THRESHOLD, True, FOLDS, fold)
+            y_embed_train = y_embed_train.astype(np.float64)
+            y_embed_test = y_embed_test.astype(np.float64)
             DO_SMOTE = False
         elif DATA == 'electrical_circuit':
             X_train, X_test, y_train, y_test, y_embed_train, y_embed_test = gen_and_preprocess_ec_data(SAMPLES_ELECTRICAL_CIRCUIT, TEST_SET_FRACTION, STATE, True, FOLDS, fold)
@@ -72,8 +78,8 @@ def run_crossvalidation():
             raise ValueError("Invalid dataset selected")
 
         # Balancing for depression
-        if DO_SMOTE:
-            X_train, y_train, y_embed_train = resample_training_data(X_train, y_train, y_embed_train, random_state=STATE)
+        #if DO_SMOTE:
+        #	X_train, y_train, y_embed_train = resample_training_data(X_train, y_train, y_embed_train, random_state=STATE)
 
         # Introduce noise
         if FLIP_LABEL_FRACTION > 0.0:
@@ -102,10 +108,6 @@ def run_crossvalidation():
         assert(isinstance(y_embed_train, np.ndarray))
         assert(isinstance(y_embed_test, np.ndarray))
 
-        #################
-        # Baselines
-        #################
-
         baselines_avg_MSE = train_and_test_baselines(X_train, X_test, y_train, y_test, y_embed_train, y_embed_test, STATE, VERBOSE, fold, DATA)
         baseline_MSE_per_fold.append(baselines_avg_MSE)
 
@@ -130,7 +132,6 @@ def run_crossvalidation():
         # Sanity Checks
         assert X_train.shape[0] >= 100 and y_train.shape[0] >= 100 and y_embed_train.shape[0] >= 100, "Arrays must have at least 100 samples for the check."
         assert (len(X_train[:100]) == len(y_train[:100])) and (len(X_train[:100]) == len(y_embed_train[:100])), "First 100 samples of X_train, y_train, and y_embed_train are not aligned."
-    
         # Run and safe
         proposed_model_fold_results = train_and_test_propositions(X_train, X_test, y_train, y_test, y_embed_train, y_embed_test, STATE, E_KEEP_RATE, EPOCHS, AUGMENT_EPOCHS, EARLY_STOP_EPOCHS, DEVICE, l)
 
@@ -143,7 +144,7 @@ def run_crossvalidation():
 
 #################
 # Proposed models
-#################    
+#################	
 
 def train_and_test_propositions(X_train, X_test, y_train, y_test, y_embed_train, y_embed_test, STATE, E_KEEP_RATE, EPOCHS, AUGMENT_EPOCHS, EARLY_STOP_EPOCHS, DEVICE, l):
     results = {}
@@ -155,7 +156,7 @@ def train_and_test_propositions(X_train, X_test, y_train, y_test, y_embed_train,
                     augment_epochs=AUGMENT_EPOCHS,
                     early_stop_epochs=EARLY_STOP_EPOCHS,
                     device=DEVICE
-                  )
+                )
     
     results["split"] = train_split_model( X_train, X_test, y_train, y_test, y_embed_train, y_embed_test,
                     e_kept_ratio=E_KEEP_RATE,
@@ -163,7 +164,7 @@ def train_and_test_propositions(X_train, X_test, y_train, y_test, y_embed_train,
                     augment_epochs=AUGMENT_EPOCHS,
                     early_stop_epochs=EARLY_STOP_EPOCHS,
                     device=DEVICE
-                  )
+                )
     
     results["deep_joint"] = train_deep_joint_model( X_train, X_test, y_train, y_test, y_embed_train, y_embed_test,
                         e_kept_ratio=E_KEEP_RATE,
@@ -172,7 +173,7 @@ def train_and_test_propositions(X_train, X_test, y_train, y_test, y_embed_train,
                         augment_epochs=AUGMENT_EPOCHS,
                         early_stop_epochs=EARLY_STOP_EPOCHS,
                         device=DEVICE
-                      )
+                    )
     
     results["deep_split"] = train_deep_split_model( X_train, X_test, y_train, y_test, y_embed_train, y_embed_test,
                         e_kept_ratio=E_KEEP_RATE,
@@ -180,16 +181,17 @@ def train_and_test_propositions(X_train, X_test, y_train, y_test, y_embed_train,
                         augment_epochs=AUGMENT_EPOCHS,
                         early_stop_epochs=EARLY_STOP_EPOCHS,
                         device=DEVICE
-                      )
+                    )
 
     return results
 
 
 #################
 # Baselines
-#################    
+#################	
 
 def train_and_test_baselines(X_train, X_test, y_train, y_test, y_embed_train, y_embed_test, STATE, VERBOSE, fold, DATA):
+    print(X_train.shape, type( y_embed_train ))
     nb_model = GaussianNB()
     y_pred_nb, json_metrics_nb = train_multitarget_baseline(
                                 model=nb_model,
@@ -309,4 +311,4 @@ def print_proposed_models_results_to_json(prop_results_per_fold):
         json.dump(results_list, f, indent=4)
         
 if __name__ == "__main__":
-    run_crossvalidation()
+    run_everything()
