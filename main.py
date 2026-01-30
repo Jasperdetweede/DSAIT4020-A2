@@ -155,14 +155,14 @@ def run_crossvalidation( dataset_name ):
 def train_and_test_propositions(X_train, X_test, y_train, y_test, y_embed_train, y_embed_test, STATE, E_KEEP_RATE, EPOCHS, AUGMENT_EPOCHS, EARLY_STOP_EPOCHS, DEVICE, l):
     results = {}
 
-    # results["joint"] = train_joint_model( X_train, X_test, y_train, y_test, y_embed_train, y_embed_test,
-    #                 e_kept_ratio=E_KEEP_RATE,
-    #                 l=l,
-    #                 epochs=EPOCHS,
-    #                 augment_epochs=AUGMENT_EPOCHS,
-    #                 early_stop_epochs=EARLY_STOP_EPOCHS,
-    #                 device=DEVICE
-    #             )
+    results["joint"] = train_joint_model( X_train, X_test, y_train, y_test, y_embed_train, y_embed_test,
+                    e_kept_ratio=E_KEEP_RATE,
+                    l=l,
+                    epochs=EPOCHS,
+                    augment_epochs=AUGMENT_EPOCHS,
+                    early_stop_epochs=EARLY_STOP_EPOCHS,
+                    device=DEVICE
+                )
     
     # results["split"] = train_split_model( X_train, X_test, y_train, y_test, y_embed_train, y_embed_test,
     #                 e_kept_ratio=E_KEEP_RATE,
